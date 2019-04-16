@@ -21,6 +21,8 @@
 
 \usepackage{array}
 
+\graphicspath{{./figures/}}
+
 \newcommand{\myremark}[4]{\textcolor{blue}{\textsc{#1 #2:}} \textcolor{#4}{\textsf{#3}}}
 \newcommand{\frank}[2][says]{\myremark{Frank}{#1}{#2}{SeaGreen}}
 \newcommand{\patrick}[2][says]{\myremark{Patrick}{#1}{#2}{Plum}}
@@ -90,17 +92,18 @@
 
 \section {Introduction}
 
+We consider the following question. Two entities are following different trajectories in an environment with obstacles which block visibility. Can they, at any time, see each other? 
+
 \subparagraph {Trajectories.}
 
-A \emph {trajectory} is a 
+A recent dramatic increase in the availability of low-cost, internet connected GPS tracking devices has driven considerable interest in spatio-temporal data (commonly called {\em trajectories}) across fields including GIScience, databases, and computational geometry. 
+Problems studied recently in computational geometry include detecting and describing flocks \cite{AnderssonGLW07, BenkertGHW08, LaubeKI04} and hotspots, clustering and categorising trajectories, map construction and others~\cite{bbgll-dcpcs-11,grsc-pcecu-07,gs-tcmrm-99,lhw-tc-07,vgk-dsmt-02}.
+Formally, a trajectory is a 
 sequence of time-stamped locations 
 in the plane, or more generally in $\R^d$, which
 models the movement of an entity.
-Trajectory data is obtained by tracking the movements of e.g. animals \cite{BovetB88,Calenge200934,gal-nmibc-09}, hurricanes \cite{Stohl1998947}, traffic \cite{lltx-dftf-10}, or other moving entities \cite{dwf-rpm-09} over time.
-Large amounts of such data have recently been collected in a variety of research fields.
-As a result, there is a great demand for tools and
-techniques to analyze trajectory data, and many innovative algorithmic solutions have been recently developed in computational geometry~\cite{bbgll-dcpcs-11,grsc-pcecu-07,gs-tcmrm-99,lhw-tc-07,vgk-dsmt-02}.
-\maarten {Cite a survey.}
+Trajectory data is obtained by tracking the movements of e.g. animals \cite{BovetB88,Calenge200934,gal-nmibc-09}, hurricanes \cite{Stohl1998947}, traffic \cite{lltx-dftf-10}, or other moving entities \cite{dwf-rpm-09} (pedestrian crowds, sportspeople, political sentiment, stock prices,\ldots) over time.
+It is beyond the scope of this paper to review the extensive literature on trajectory analysis; we refer the interested reader to the excellent survey by Gudmundsson~\etal~\cite{GudmundssonLW17}.
 
 \subparagraph {Visibility.}
 
@@ -108,100 +111,55 @@ techniques to analyze trajectory data, and many innovative algorithmic solutions
 Many different terms, like art-gallery problems, guarding, or visibility itself, have been used during the last three decades to refer to problems related to the question of whether two object are \emph{visible} from each other, amidst a number of obstacles.
 and even more in adjacent fields such as computer graphics~\cite {Durand00amultidisciplinary}, Geographic Information Science (GIS)~\cite{FM03}, and robotics~\cite {moet}, to name just a few.
 Within computational geometry, Gosh and Giswani compiled a survey of {\em unsolved} problems in this area~\cite {Ghosh:2013:UPV:2543581.2543589}.
-Buchin~\etal recently studied visibility between {\em uncertain} points~\cite {bkls-rbavil-19}, and as a subroutine solve the question of whether two points can see each other (improving an earlier result by Rote~\cite{r-dc-13} from $O(n^9)$ time to $O(n^2)$).
+Core visibility problems in computational geometry include {\em ray shooting}~\cite{10,13,17,20}, guarding~\cite {Chvatal75,Fisk78,survey}.
+For more information about visibility problems, refer to O'Rourke's book \cite{ORourke87} chapter 28, and the surveys by Durant \cite{durand2000multidisciplinary} and Gosh  \cite{Ghosh:2013:UPV:2543581.2543589}. 
 
-\subparagraph {Trajectory Visibility.}
-
-A natural question to ask, with numerous applications, is whether two entities following different trajectories in a scene with obstacles that block visibility, can see each other.
-Somewhat surprisingly, given the amount of research in both trajectories and visibility, almost no previous work in this direction exists.
-Part of the reason may be that studying trajectories in {\em context} is still relatively new area, and context is essential for meaningful question.
-On the other hand, the role of {\em time} is essential in this scenario: we are not interested whether there exists visibility between two geometric shapes, but rather whether there exists a {\em time} at which two point objects are visible. This makes the question fundamentally different from existing work in visibility.
-
-\subparagraph {Variants.}
-
-Trajectories walk through walls or not?
-Include figure.
+\subparagraph {Trajectory visibility.}
 
 
+\begin{figure} [tb]
+	\centering \includegraphics {variants.pdf} 
+	\caption
+	{
+	  Different versions of the question:
+	  two trajectories inside a simple polygon (left);
+	  two trajectories intersecting a simple polygon (middle);
+	  or two trajectories in a polygonal domain (right).
+	}  
+	\label{fig:variants}
+\end{figure}
 
-\subparagraph {Data Structures.}
-
-In many analysis applications, trajectories live in a static environment (the obstacles), but new trajectories arise over time. This raises the natural question whether one can store the environment in a data structure that can support visibility queries between trajectories.
-\maarten {In a later version, we should work out some of these applications. One of them is sampling from a distribution (our original one), but I'm sure there are many other scenarios in which the environment doesn't change, but the trajectories do. :)}
-
-Solutions for the same question for point-to-point visibility are well-known.
-Guibas and Hersberger \cite{GUIBAS1989126} present a linear-size data structure on a simple polgyon which can return, the shortest path between a pair of query points in logarithmic time. Note that the points are mutually visible if and only if their shortest path is a single line segment. \maarten {Find out about earlier solutions for this problem.}
-
-\subparagraph {Trajectory planning.}
-
-In contrast to {\em testing} visibility between trajectories, there is a considerable body of previous work on trajectory {\em planning} under visibility contraints (points should remain mutually visible) or with the aim to maximize visibility.
-Shkurti and Dudek~\cite {6907405} consider the complementary problem: how can we plan the trajectories of two moving objects such as to maximize visibility between them.
-This problem is also closely related to {\em camera planning}~\cite {christie}, where one trajectory is given as input but a second one should be chosed to maintain visibility between the two points.
-\maarten {Eventually we should do a more thorough review of this area.}
-
-
-\subparagraph {Formal Problem statement.}
-
-  Given a simple polygon $P$, preprocess $P$ into a data structure that can answer queries of the following type: given two trajectories $T_1$ and $T_2$ that represent the motion of two moving entities $e_1$ and $e_2$ within $P$, is there a time $t^*$ at which $e_1$ and $e_2$ see each other?
+Somewhat surprisingly, given the amount of research on both trajectories and visibility, not much previous work exists on their combination.
+%
+In this paper, we study the following fundamental question.
+  Given a simple polygon or polygonal domain $P$ with $n$ vertices, and given two trajectories $T_1$ and $T_2$ of $\tau$ vertices each, is there a time $t$ at which two entities moving along $T_1$ and $T_2$ see each other?
+  We assume that each entity moves with constant (but possibly different) speeds between trajectory vertices, and cannot see though the edges of $P$.
+  We distinguish several variants depending on whether $P$ is a simple polygon or a polygon with holes, and whether the trajectories are allowed to intersect $P$ (i.e. vehicles moving through fog, animals moving though foliage) or not (e.g. pedestrians moving among buildings, ships moving on water bodies). Refer to Figure~\ref {fig:variants}.
     
-\maarten {Unify notation.}
 
-\subparagraph {Results.}
+%Part of the reason may be that studying trajectories in {\em context} is still relatively new area, and context is essential for meaningful question.
+%On the other hand, the role of {\em time} is essential in this scenario: we are not interested whether there exists visibility between two geometric shapes, but rather whether there exists a {\em time} at which two point objects are visible. This makes the question fundamentally different from existing work in visibility.
 
-  If we denote by $n$ the complexity of $P$, and by $m$ the total complexity of the two query trajectories, we obtain the following result:
-  
-  We can preprocess $P$ in $O(...)$ time into a data structure using $O(...)$ space, such that a query can be answered in $O(...)$ time.
+Note that we are only interested in the question whether there {\em exists} a time at which the two entities see each other.\footnote {More complex questions may be considered, we start with the most basic version; refer also to Section~\ref {sec:conclusions}.} 
+This implies we can temporally decompose the problem: the answer is {\em yes} if and only if the disjunction of the question is {\em yes} for each time interval between two consecutive time stamps.
+When considering this question, two fundamentally different approaches come to mind. On the one hand, when $\tau$ is small compared to $n$, the best approach may be to simply solve the problem for each time interval separately. On the other hand, when $\tau$ is large compared to $n$, it may be more efficient to spend some time on preprocessing $P$ first, if this allows us to spend less time per time interval.
+We hence distinguish between the {\em algorithmic} question and the {\em data structure} question.
 
+\subparagraph {Data structures for visibility.}
 
+Data structures for point-to-point visibility are well-known.
+Guibas and Hersberger \cite{GUIBAS1989126} present a linear-size data structure on a simple polgyon which can return, the shortest path between a pair of query points in logarithmic time. Note that the points are mutually visible if and only if their shortest path is a single line segment.
+Guibas and Hershberger's work concludes a series of triangulation-based shortest path algorithms for a simple polygon including Lee and Preparata \cite{LeeP84}, Reif and Storer \cite{ReifS85} and Guibas~\etal \cite{GuibasHLST87}.
+Lee and Preparata \cite{LeeP84} find the shortest path between two points in a simple polygon in linear time, if linear time triangulation is used; which implicitly solves visibility between two points.
 
-\section{Introduction}
-
-In a geometric context, two objects are visible to each other if the line segment connecting them does not cross any obstacles. Visibility is a core subject within computational geometry; in the past 30 years there have been more than 500 publications \cite{ORourke87}. A trajectory is a sequence of time-stamped locations in the plane (or more generally, in $\mathbb{R}^d$). Trajectory data is obtained by tracking the movements of e.g. animals \cite{BovetB88,Calenge200934,gal-nmibc-09}, hurricanes \cite{Stohl1998947}, traffic \cite{lltx-dftf-10}, or other moving entities \cite{dwf-rpm-09} over time.
-Large amounts of such data have recently been collected in a variety of research fields. As a result, there is a great demand for tools and
-techniques to analyze trajectory data, and many innovative algorithmic solutions have been recently developed in computational geometry~\cite{bbgll-dcpcs-11,grsc-pcecu-07,gs-tcmrm-99,lhw-tc-07,vgk-dsmt-02}
-We consider the fundamental problem linking visibility and trajectory analysis: given two entities $q$ and $r$ that each travel along a trajectory, is there any time where $q$ and $r$ can see one another? Surprisingly (given the considerable amount of research on both visibility and trajectories), this is the first paper where visibility between trajectories is considered. We provide a wide collection of results for various types of trajectories and obstacle domains, see Table \ref{tab:results}.
-
-%\emph{Trajectory planning} is a fundamental issue for robotic applications and automotion in general \cite{gasparetto} and it is the core motivation for a large number of publications in computer science \cite{}. \patrick[wonders]{how important trajectory plannning is for us.}
-
-\subparagraph{Visibility.}
-
-Visibility is one of the most studied topics in computational geometry~\cite {moet,welzl1985constructing,POCCHIOLA1996279}. Various core problems of computational geometry consider the visibility between objects in an obstacle domain and we mention a few:
-The ray shooting problem (given a polygon and a ray emanating from a given point in a given direction, find the first intersection, if any, of the ray with the polygon boundary) has been studied by Chazelle [10], Chazelle and Guibas [13], Guibas~\etal [17], and Hershberger and Suri [20]. The guarding problem (given a polygon, find a placement of guards at the vertices to cover the whole polygon) and its many variations has been studied by Chvatal \cite{Chvatal75}, Fisk \cite{Fisk78} and \patrick{survey}.
-
-The visibility graph problem asks, given an object set $Q$ within an obstacle domain $P$, to construct a graph on $Q$ where two objects share an edge if they are mutually visible. The visibility graph is extensively used in robot motion planning \cite{de1997computational} and it has many variants (refer to \cite{Ghosh:2013:UPV:2543581.2543589} for a survey). The 3D variant was shown to be NP-hard \cite{canny1988complexity} and recently it has been shown that the recognition variant is $\exists \mathbb{R}$-complete \cite{cardinal2017recognition}. The visibility polygon problem (given a polygon P and a point q inside the polygon, determine the polygon consisting of all the points in P visible from q). Early results on this problem include the work by ElGindy and Avis \cite{el1981linear}, Lee \cite{lee1983visibility} and Joe and Simpson \cite{joe1987corrections}. Recent results focus on visibility polygon retrieval and include Aronov \etal \cite{aronov2002visibility}, Zarei \etal \cite{zarei2005efficient} and most recently Diez \etal \cite{DKRRS2017KineticAPSPEuroCG}.
-
-For more information about visibility problems, refer to Appendix~$A$, O'Rourke's book \cite{ORourke87} chapter 28, and the surveys by Durant \cite{durand2000multidisciplinary} and Gosh  \cite{Ghosh:2013:UPV:2543581.2543589}. 
-
-\patrick{This should go somewhere ...} Lee and Preparata \cite{LeeP84} find the shortest path between two points in a simple polygon in linear time, if linear time triangulation is used; which implicitly solves visibility between two points.
-
-\subparagraph{Visibility and motion.}
 
 Visibility of a moving object is an old subject within visibility that recently has gained attention within the computational geometry community. Bern \etal \cite{bern1994visibility} and  Mulmuley \cite{mulmuley1991hidden} study maintaining the visibility polygon of a point that moves over a straight path. 
-Buchin~\etal studied visibility between {\em uncertain} points~\cite {bkls-rbavil-19}, and as a subroutine solve the question of whether two points can see each other (improving an earlier result by Rote~\cite{r-dc-13} from
-$O(n^9)$ time to $O(n^2)$).  Karavelas and Guibas \cite{karavelas2001static} describe how to maintain a constrained Delaunay triangulation of a set of moving points, and show how this can be used to maintain nearest neighbors.
-Aronov \etal \cite{aronov2002visibility} demonstrate a kinetic algorithm that tracks the visibility polygon of a moving query point $q$. The most recent result on visibility and motion is by Diez \etal \cite{DKRRS2017KineticAPSPEuroCG} who show how to maintain the shortest path between two moving entities using a kinetic data structure. The entities can see one another if and only if their shortest path is a line segment and thus this kinetic data structure can be used to compute visibility between two moving entities. For more information on visibility during motion refer to the summary of prior results in Appendix~$B$.
+Aronov \etal \cite{aronov2002visibility} demonstrate a kinetic algorithm that tracks the visibility polygon of a moving query point $q$. The most recent result on visibility and motion is by Diez \etal \cite{DKRRS2017KineticAPSPEuroCG} who show how to maintain the shortest path between two moving entities using a kinetic data structure. The entities can see one another if and only if their shortest path is a line segment and thus this kinetic data structure can be used to compute visibility between two moving entities. 
+A large body of work also exists on the complementary problem of planning trajectories under visibility constraints~\cite {6907405}.
 
-\subparagraph{Trajectories.}
-A recent dramatic increase in the availability of low-cost, internet connected GPS tracking devices has driven considerable interest in spatio-temporal data (commonly called trajectories) across fields including GIScience, databases, and computational geometry. Problems relevant to computational geometry include detecting and describing flocks \cite{AnderssonGLW07, BenkertGHW08, LaubeKI04} and hotspots, clustering and categorising trajectories, map construction and \ldots.
-\patrick{We can cite trajectory stuff infinitely, to what extent do we want to lit review?}
 
-Data can come from animal tracking, car and ship traffic, pedestrian crowds, sportspeople, and abstract spaces such as political sentiment or stock prices.
 
-Gudmundsson~\etal have a survey of the increasing importance of trajectory data in a wide variety of fields \cite{GudmundssonLW17}.
-
-\subparagraph{Data Structures.}
-In many analysis applications, trajectories live in a static environment (the obstacles), but new trajectories arise over time. This raises the natural question whether one can store the environment in a data structure that can support visibility queries between trajectories.
-\maarten[has previously said]{In a later version, we should work out some of these applications. One of them is sampling from a distribution (our original one), but I'm sure there are many other scenarios in which the environment doesn't change, but the trajectories do.}
-Solutions for the same question for point-to-point visibility are well-known.
-Guibas and Hersberger \cite{guibas1989optimal} present a linear-size data structure on a simple polgyon which can return the shortest path between a pair of query points in logarithmic time. Note that the points are mutually visible if and only if their shortest path is a single line segment.
-
-Guibas and Hershberger's work concludes a series of triangulation-based shortest path algorithms for a simple polygon including Lee and Preparata \cite{LeeP84}, Reif and Storer \cite{ReifS85} and Guibas~\etal \cite{GuibasHLST87}. \patrick{How deep into ancient history do we really want to go here}
-
-\subparagraph{Problem statement and results.}
-
-We are given a polygonal domain $P$ with $n$ vertices and we want to build a data structure that can answer queries of the type: given two entities $r$ and $q$ that move along trajectories $T_r$ and $T_q$ with $\tau$ vertices in the time frame $[0,1]$,  is there a time $t$ where $q$ and $r$ can see one another? We consider the situations where $T_r$ and $T_q$ are both points, $T_r$ is a line segment and $T_q$ is a point and $T_r$ and $T_q$ are both line segments. We consider the domains where $P$ is a simple polygon, $P$ is a simple polygon where the trajectories can go through edges and $P$ as a polygonal domain. In each of these scenarios, we preprocess $P$ to obtain sub-linear query time.The original problem can therefore be solved in $o(\tau n)$ time.  For each scenario we also provide a one-shot algorithm for comparison. In this paper we encounter the following sub-problem: given a convex polygon $P'$ with $m$ vertices, can you build a data structure such that for any hyperbolic segment $\gamma$, one can determine an intersection between $P'$ and $\gamma$ (if any exists)? We show how to preprocess $P'$ such that these queries can be solved in time sub-linear in $m$ and we believe that this result could be of independent interest. The main idea of this paper, is to transform the visibility (or intersection) queries into $k$-dimensional halfspace empyness queries for a constant dimension $k$. Throughout this paper we solve $k$-dimensional halfspace emptyness queries using the partition trees from Chan \cite{chan2012optimal} which preprocess a set of $n$ objects in $\mathcal{O}(n^{1+ \varepsilon}$ time, $\mathcal{O}(n)$ space and can answer halfspace range queries in $\mathcal{O}(n^{1 - \frac{1}{k} + \varepsilon})$ time where $\varepsilon$ is an arbitrarily small positive constant. $k$-dimensional halfspace emptyness queries can also be solved using cutting trees which use $\mathcal{O}(n^{k})$ storage and preprocessing time for a faster $\mathcal{O}(\log^k n)$ query time. So throughout the paper, you can insert this value for a time-space tradeoff.
-
-\begin{table}[]
+\begin{table}[t]
     \centering
     \begin{longtabu}{|c|c|c|c|c|c|c|c|}
     \hline
@@ -224,14 +182,20 @@ We are given a polygonal domain $P$ with $n$ vertices and we want to build a dat
         & & D & $\mathcal{O}(n \log n)$ & $\mathcal{O}(n^c)$ & $\mathcal{O}(n^{c + \varepsilon})$ & $\mathcal{O}(\log^c n)$ & Section~\ref {}\\ 
         \hline
     \end{longtabu}
-    \caption{The table of results, assuming one uses partition trees. See the theorems for more general bounds. The constant $c$ is not determined but very high. The two left-most columns specify if the query entity is a point ($\bullet$) or line segment ($\slash$). The third column specifies if the domain $P$ is a simple polygon with $n$ vertices (S), a polygon where the query segments may intersect $P$ (I) or a polygonal domain with $n$ vertices (D).}
+    \caption{Results using partition trees. The two left-most columns specify if the query entity is a point ($\bullet$) or line segment ($\slash$). The third column specifies if the domain $P$ is a simple polygon (S), a polygon where the query segments may intersect $P$ (I) or a polygonal domain with $n$ vertices (D).}
     \label{tab:results}
 \end{table}
-\maarten {I don't think the term "transparent" is the right one to use: to me something transparent is something I can see through but not walk through, not the other way around.}
 
-\subparagraph{Discussion of our results}
+\subparagraph {Results.}
+  Our results for the case where the two trajectories are single line segments are summarized in Table~\ref {tab:results}; we additionally consider the case where both are points (the entities are stationary) for comparison, and the case where {\em one} entity is a point and the other is a segment as an easier version of the problem leading up to our more general results.
+  
+  In Section~\ref {sec:alg}, we discuss our algorithmic results.
+  The data structure result is first treated for the case where one entity is stationary in Section~\ref {sec:donkey}, and then for the general case in Section~\ref {sec:monkey}.
+  
+  The main idea behind the data structure solutions is to transform the visibility (or intersection) queries into $k$-dimensional halfspace empyness queries for a constant dimension $k$. Throughout this paper we solve $k$-dimensional halfspace emptyness queries using the partition trees from Chan \cite{chan2012optimal} which preprocess a set of $n$ objects in $\mathcal{O}(n^{1+ \varepsilon}$ time, $\mathcal{O}(n)$ space and can answer halfspace range queries in $\mathcal{O}(n^{1 - \frac{1}{k} + \varepsilon})$ time where $\varepsilon$ is an arbitrarily small positive constant; this leads to the times listed in Table~\ref {tab:results}. Alternatively, $k$-dimensional halfspace emptyness queries can also be solved using cutting trees which use $\mathcal{O}(n^{k})$ storage and preprocessing time for a faster $\mathcal{O}(\log^k n)$ query time.
+  % So throughout the paper, you can insert this value for a time-space tradeoff.
 
-\ivor{some story on the different variants and why they are all useful}
+In our solution we encounter the following sub-problem of independent interest: we need to preprocess a convex polygon $P'$ such that we can answer intersection queries with hyperbolic segments in sublinear time; we discuss this problem in Section~\ref {sec:hyper}.
 
 \section{Preliminaries}
 \label{sec:prelims}
@@ -452,8 +416,19 @@ Being aware of this technicality, we proceed as follows: we manually check if an
     We can preprocess a simple polygon $P$ in $\mathcal{O}(n^{1 + \varepsilon} \log n )$ space and $\mathcal{O}(n^{1 + \varepsilon} \log^3 n)$ time. Such that for two query segment trajectories $q$ and $r$ contained in $P$, we can determine if there is a point on $r$ that is visible from $q$ in $\mathcal{O}(n^{\frac{3}{4} + \varepsilon} \log n)$ time.
 \end{theorem}
 
+\section {Conclusions}
+\label {sec:conclusions}
 
+Future work:
 
+* We want to improve our results, or find lower bounds (the obious one)
+
+* Now that we better understand the algorithmic complexity of the question whether two moving entities can see each other at all, we may also consider more complex questions, such as
+- when do they see each other
+- how often do they see (start seeing) each other
+- how long do they see each other (in total or consecutively)
+
+* We could say something about the uncertain trajectories application
 
 \newpage
 \bibliographystyle{abbrv}
