@@ -82,7 +82,78 @@
 \end{abstract}
 
 
+
+
+
 \newpage
+
+
+\section {Introduction}
+
+\subparagraph {Trajectories.}
+
+A \emph {trajectory} is a 
+sequence of time-stamped locations 
+in the plane, or more generally in $\R^d$, which
+models the movement of an entity.
+Trajectory data is obtained by tracking the movements of e.g. animals \cite{BovetB88,Calenge200934,gal-nmibc-09}, hurricanes \cite{Stohl1998947}, traffic \cite{lltx-dftf-10}, or other moving entities \cite{dwf-rpm-09} over time.
+Large amounts of such data have recently been collected in a variety of research fields.
+As a result, there is a great demand for tools and
+techniques to analyze trajectory data, and many innovative algorithmic solutions have been recently developed in computational geometry~\cite{bbgll-dcpcs-11,grsc-pcecu-07,gs-tcmrm-99,lhw-tc-07,vgk-dsmt-02}.
+\maarten {Cite a survey.}
+
+\subparagraph {Visibility.}
+
+\emph{Visibility} is one of the most studied topics in computational geometry~\cite {moet,welzl1985constructing,POCCHIOLA1996279}.
+Many different terms, like art-gallery problems, guarding, or visibility itself, have been used during the last three decades to refer to problems related to the question of whether two object are \emph{visible} from each other, amidst a number of obstacles.
+and even more in adjacent fields such as computer graphics~\cite {Durand00amultidisciplinary}, Geographic Information Science (GIS)~\cite{FM03}, and robotics~\cite {moet}, to name just a few.
+Within computational geometry, Gosh and Giswani compiled a survey of {\em unsolved} problems in this area~\cite {Ghosh:2013:UPV:2543581.2543589}.
+Buchin~\etal recently studied visibility between {\em uncertain} points~\cite {bkls-rbavil-19}, and as a subroutine solve the question of whether two points can see each other (improving an earlier result by Rote~\cite{r-dc-13} from $O(n^9)$ time to $O(n^2)$).
+
+\subparagraph {Trajectory Visibility.}
+
+A natural question to ask, with numerous applications, is whether two entities following different trajectories in a scene with obstacles that block visibility, can see each other.
+Somewhat surprisingly, given the amount of research in both trajectories and visibility, almost no previous work in this direction exists.
+Part of the reason may be that studying trajectories in {\em context} is still relatively new area, and context is essential for meaningful question.
+On the other hand, the role of {\em time} is essential in this scenario: we are not interested whether there exists visibility between two geometric shapes, but rather whether there exists a {\em time} at which two point objects are visible. This makes the question fundamentally different from existing work in visibility.
+
+\subparagraph {Variants.}
+
+Trajectories walk through walls or not?
+Include figure.
+
+
+
+\subparagraph {Data Structures.}
+
+In many analysis applications, trajectories live in a static environment (the obstacles), but new trajectories arise over time. This raises the natural question whether one can store the environment in a data structure that can support visibility queries between trajectories.
+\maarten {In a later version, we should work out some of these applications. One of them is sampling from a distribution (our original one), but I'm sure there are many other scenarios in which the environment doesn't change, but the trajectories do. :)}
+
+Solutions for the same question for point-to-point visibility are well-known.
+Guibas and Hersberger \cite{GUIBAS1989126} present a linear-size data structure on a simple polgyon which can return, the shortest path between a pair of query points in logarithmic time. Note that the points are mutually visible if and only if their shortest path is a single line segment. \maarten {Find out about earlier solutions for this problem.}
+
+\subparagraph {Trajectory planning.}
+
+In contrast to {\em testing} visibility between trajectories, there is a considerable body of previous work on trajectory {\em planning} under visibility contraints (points should remain mutually visible) or with the aim to maximize visibility.
+Shkurti and Dudek~\cite {6907405} consider the complementary problem: how can we plan the trajectories of two moving objects such as to maximize visibility between them.
+This problem is also closely related to {\em camera planning}~\cite {christie}, where one trajectory is given as input but a second one should be chosed to maintain visibility between the two points.
+\maarten {Eventually we should do a more thorough review of this area.}
+
+
+\subparagraph {Formal Problem statement.}
+
+  Given a simple polygon $P$, preprocess $P$ into a data structure that can answer queries of the following type: given two trajectories $T_1$ and $T_2$ that represent the motion of two moving entities $e_1$ and $e_2$ within $P$, is there a time $t^*$ at which $e_1$ and $e_2$ see each other?
+    
+\maarten {Unify notation.}
+
+\subparagraph {Results.}
+
+  If we denote by $n$ the complexity of $P$, and by $m$ the total complexity of the two query trajectories, we obtain the following result:
+  
+  We can preprocess $P$ in $O(...)$ time into a data structure using $O(...)$ space, such that a query can be answered in $O(...)$ time.
+
+
+
 \section{Introduction}
 
 In a geometric context, two objects are visible to each other if the line segment connecting them does not cross any obstacles. Visibility is a core subject within computational geometry; in the past 30 years there have been more than 500 publications \cite{ORourke87}. A trajectory is a sequence of time-stamped locations in the plane (or more generally, in $\mathbb{R}^d$). Trajectory data is obtained by tracking the movements of e.g. animals \cite{BovetB88,Calenge200934,gal-nmibc-09}, hurricanes \cite{Stohl1998947}, traffic \cite{lltx-dftf-10}, or other moving entities \cite{dwf-rpm-09} over time.
@@ -135,22 +206,28 @@ We are given a polygonal domain $P$ with $n$ vertices and we want to build a dat
     \begin{longtabu}{|c|c|c|c|c|c|c|c|}
     \hline
    \rowfont{\bfseries}
-        q & r & $P$ & space & preprocessing & query time & known & oneshot time \\ \hline
+        \multirow{2}{*}{q} & \multirow{2}{*}{r} & \multirow{2}{*}{$P$} & algorithm & \multicolumn{3}{c|}{data structure} & source \\ 
+        & & & & space & preprocessing & query & \\
+        \hline\hline
         %
-        \multirow{2}{*}{P} & \multirow{2}{*}{P} & S + T & $\Theta(n)$ & $\mathcal{O}(n \log n)$ & $\Theta(\log n)$ & \cite{guibas1989optimal} & $\Theta(n)$  \\
-        & & D & $\mathcal{O}()$ & $\mathcal{O}()$ & $\mathcal{O}()$ & \cite{POCCHIOLA1996279} & $\Theta(n)$ \\ \hline
+        \multirow{2}{*}{$\bullet$} & \multirow{2}{*}{$\bullet$} & S or I &  $\Theta(n)$ & $\Theta(n)$ & $\mathcal{O}(n \log n)$ & $\Theta(\log n)$ & \cite{guibas1989optimal} \\
+        & & D & $\Theta(n)$ & $\mathcal{O}()$ & $\mathcal{O}()$ & $\mathcal{O}()$ & \cite{POCCHIOLA1996279} \\ 
+        \hline
         %
-        \multirow{3}{*}{P} & \multirow{3}{*}{S} & S & $\Theta(n)$ & $\mathcal{O}(n \log n)$ & $\Theta(\log n)$ & new & $\Theta(n)$ \\
-        & & T & $\mathcal{O}(n^{2} \log n)$ & $\mathcal{O}(n^{2 + \varepsilon})$ & $\mathcal{O}(n^{\frac{7}{8} + \varepsilon})$ & new & $\Theta(n)$  \\
-        & & D & $\mathcal{O}(n^4 \log n)$ & $\mathcal{O}(n^{4 + \varepsilon })$ & $\mathcal{O}(n^{7/8 + \varepsilon})$ & new & $\mathcal{O}(n \log n)$\\ \hline
+        \multirow{3}{*}{$\bullet$} & \multirow{3}{*}{$\slash$} & S & $\Theta(n)$ & $\Theta(n)$ & $\mathcal{O}(n \log n)$ & $\Theta(\log n)$ & Section~\ref {} \\
+        & & I & $\Theta(n)$ & $\mathcal{O}(n^{2} \log n)$ & $\mathcal{O}(n^{2 + \varepsilon})$ & $\mathcal{O}(n^{\frac{7}{8} + \varepsilon})$ & Section~\ref {} \\
+        & & D & $\mathcal{O}(n \log n)$ & $\mathcal{O}(n^4 \log n)$ & $\mathcal{O}(n^{4 + \varepsilon })$ & $\mathcal{O}(n^{7/8 + \varepsilon})$ &  Section~\ref {} \\ 
+        \hline
         %
-        \multirow{3}{*}{S} & \multirow{3}{*}{S} & S & $\mathcal{O}(n \log n)$ & $\mathcal{O}(n^{1 + \varepsilon})$ & $\mathcal{O}(n^{3/4 + \varepsilon})$ & new & $\Theta(n)$ \\
-        & & T & $\mathcal{O}(n^{c})$ & $\mathcal{O}(n^{c+\varepsilon})$ & $\mathcal{O}(\log^c n)$ & new & $\Theta(n)$ \\
-        & & D & $\mathcal{O}(n^c)$ & $\mathcal{O}(n^{c + \varepsilon})$ & $\mathcal{O}(\log^c n)$ & new& $\mathcal{O}(n \log n)$\\ \hline
+        \multirow{3}{*}{$\slash$} & \multirow{3}{*}{$\slash$} & S & $\Theta(n)$ & $\mathcal{O}(n \log n)$ & $\mathcal{O}(n^{1 + \varepsilon})$ & $\mathcal{O}(n^{3/4 + \varepsilon})$ & Section~\ref {} \\
+        & & I & $\Theta(n)$ & $\mathcal{O}(n^{c})$ & $\mathcal{O}(n^{c+\varepsilon})$ & $\mathcal{O}(\log^c n)$ & Section~\ref {} \\
+        & & D & $\mathcal{O}(n \log n)$ & $\mathcal{O}(n^c)$ & $\mathcal{O}(n^{c + \varepsilon})$ & $\mathcal{O}(\log^c n)$ & Section~\ref {}\\ 
+        \hline
     \end{longtabu}
-    \caption{The table of results, assuming one uses partition trees. See the theorems for more general bounds. The constant $c$ is not determined but very high. The two left-most columns specify if the query entity is a point (P) or line segment (S). The third column specifies if the domain $P$ is a simple polygon with $n$ vertices (S), a transparent polygon where the entities can walk through edges of $P$ (T) or a polygonal domain with $n$ vertices (D).}
+    \caption{The table of results, assuming one uses partition trees. See the theorems for more general bounds. The constant $c$ is not determined but very high. The two left-most columns specify if the query entity is a point ($\bullet$) or line segment ($\slash$). The third column specifies if the domain $P$ is a simple polygon with $n$ vertices (S), a polygon where the query segments may intersect $P$ (I) or a polygonal domain with $n$ vertices (D).}
     \label{tab:results}
 \end{table}
+\maarten {I don't think the term "transparent" is the right one to use: to me something transparent is something I can see through but not walk through, not the other way around.}
 
 \subparagraph{Discussion of our results}
 
@@ -379,8 +456,8 @@ Being aware of this technicality, we proceed as follows: we manually check if an
 
 
 \newpage
-\bibliographystyle {abbrv}
-\bibliography {bib}
+\bibliographystyle{abbrv}
+\bibliography{../bib}
 
 
 
