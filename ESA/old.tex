@@ -1,0 +1,42 @@
+
+
+In this section we consider the scenario where $P$ is a simple polygon, $q$ and $r$ are line-segment trajectories that do not have to be contained in $P$. In the previous section, we could query the visibility glass $L(q,r)$ and we knew that any line-of-sight between the two entities should be contained in $L(q,r)$. In this scenario, an entity could leave and re-enter $P$ a linear number of times, meaning that for the same approach to work we would have to check a linear number of visibility glasses between portions of $q$ and $r$ and this takes too much time. Instead, we try a slightly different approach which dualizes visibility glasses not to polygons in $\mathbb{R}^2$, but curved polygonal surfaces in $\mathbb{R}^4$.
+
+Suppose that there is a time $t^*$ where $q$ and $r$ are mutually visible within $P$. Their line-of-sight (when extended) at time $t^*$ intersects two edges of $P$. Thus for any time where $q$ and $r$ are mutually visible there exists two edges $e_1, e_2$ of $P$ where  the segment between the entities coincides with a segment in $L(e_1, e_2)$ and lies in between $e_1$ and $e_2$.
+
+Let $L$ be an arbitrary vertical line outside of $P$ and fix it. Let $\ell$ be any non-vertical line in the plane. For each point $p \in \ell$, we denote by $d(p)$ the distance from $p$ to $L$.
+
+\begin{lemma}
+Let $e_1, e_2$ be two edges of a simple polygon $P$ and let $L(e_1, e_2)$ be the visibility glass of $e_1$ and $e_2$. Let $\ell$ be the line extending a segment in $L(e_1, e_2)$ with a positive slope that intersects $e_1$ first in the point $p_1$ and intersects $e_2$ in the point $p_2$. Any segment from $m_1$ to $m_2$ on $\ell$ lies in $L(e_1, e_2)$ if and only if: $d(m_1) \ge d(p_1) \wedge d(m_2) \ge d(p_2)$.
+\end{lemma}
+
+\paragraph{My crazy idea.}
+Assume for easy of exposition that $q$ is within the polygon and $r$ is not. $r$ traverses the line: $a_1 x - a_2$. We transpose the plane such that the vertical line intersects the origin. Our illusive distance function is now simply the $x$ coordinate. Let $\Lambda(e_1,e_2)^+$ be the positive half of $\Lambda(e_1, e_2)$ where $e_1$ lies on the line $y = x_1 x - x_2$. Moreover, any line with positive slope intersects first $e_1$ and then $e_2$. Any point $(a,b) \in \Delta$ represents a line $ax - b$ in the primal. We assign this point $(a,b)$ a third coordinate, which is the $x$-coordinate of its intersection with $e_1$ which we can easily compute algebraically:
+
+\begin{equation}
+    (a,b) \in \Lambda(e_1, e_2)^+ \rightarrow (a, b,  \frac{b - x_2}{a - x_1})
+\end{equation}
+
+Consider the triangle $\Delta$ with its 3-dimensional coordinates. There is a point of mutual visibility if the query curve $\gamma$ intersects the area above this tilted triangle. We also assign a third coordinate to the query curve $\gamma$:
+
+\begin{equation}
+    (a,b) \in \gamma \rightarrow (a, b, \frac{b - a_2}{a - x_2})
+\end{equation}
+
+We now observe the following:
+
+\begin{observation}
+The query curve $\gamma$ is $a,b$-monotone. And any $a,b$-monotone mappings to this third coordinate are monotone. That means that one of four things can happen:
+\begin{itemize}
+\item The query curve $\gamma$ starts and leaves through an edge boundary or has an endpoint in the area.
+\item The query curve $\gamma$ never intersects the area.
+\item The query curve $\gamma$ starts intersecting the area at an arbitrary place and ends through a boundary.
+\item The query curve $\gamma$ enters through a boundary and leaves through an arbitrary place.
+\end{itemize}
+\end{observation}
+
+This means te following: either $\gamma$ has an endpoint in $\Lambda(e_1, e_2)^3$, $\gamma$ stays disjoint in $\Lambda(e_1, e_2)^3$ or there is an intersection between the endcut of $\gamma$ and a boundary plane. We aim to find the last one.
+
+* Dipping are at most 2 points, so find them.
+* Else we use our first halfspace range query to get them as a binary search representation.
+* Then we again algebraically range search on that, to select any point with the correct $z$-coordinate.

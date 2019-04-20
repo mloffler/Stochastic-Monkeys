@@ -1,0 +1,53 @@
+#+STARTUP: showeverything
+
+* Introduction
+
+main things still to do
+
+- make abundantly clear why we care about walking through walls
+- overview of results
+
+* Preliminaries
+** Intersection queries using algebraic range searching
+
+Basically three things:
+
+- the main idea of semi algebraic range searching/linearization
+- that one can somehow plug in partition trees/cutting trees to get some sort
+  of space/query time tradeoff.
+- the example of applying it to intersect a hyperbolic curve segment with a set
+  of line segments (details of which are in the appendix).
+
+** Testing visibility in a polygonal domain
+
+The algorithmic problem goes here (since it does not seem to be obvious if we
+can even do a simple polygon in linear time, just briefly state the O(n log n)
+result for
+
+
+* A data structure for one stationary entity and one moving entity
+** Simple polygon
+use G&H as a blackbox
+
+** An intersectable simple polygon
+- move the description of the Aronov structure here.
+- describe whatever we need for the persistence here.
+
+** A polygonal domain
+
+
+* A data structure for two moving entities
+
+brief overview of the main plans. For simple polygons: get visibility glass -> dualize to convex
+polygon -> test for intersection. Details of the intersection testing in subsec
+1, full approach in subsec 2. For intersectable polygons and polygonal domains:
+use big hammer (algebraic range searching); details in subsec 3.
+
+** A data structure for testing intersections between a curve segment with a convex polygon
+
+** Simple polygon
+
+Move the extensive description of the G&H Structure here.
+
+** Extension to intersectable polygons and polygonal domains
+If there is actually anything that we can definitely say here
