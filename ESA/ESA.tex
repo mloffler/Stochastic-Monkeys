@@ -22,13 +22,15 @@
 \newcommand{\maarten}[2][says]{\myremark{Maarten}{#1}{#2}{Red}}
 \newcommand{\ivor}[2][says]{\myremark{Ivor}{#1}{#2}{Blue}}
 
+\renewcommand{\myremark}[4]{}
+
 \usepackage{tabularx,booktabs}
 
 \newtheorem{condition}{Condition}
 \newtheorem{conjecture}{Conjecture}
 \newtheorem{observation}{Observation}
 
-\newcommand{\etal}{\textnormal{et al.}\xspace}
+\newcommand{\etal}{\textit{et al.}\xspace}
 
 % macro for making mathcal definitions
 \newcommand{\mkmcal}[1]{\ensuremath{\mathcal{#1}}\xspace}
@@ -78,19 +80,38 @@
 \titlerunning{Trajectory Visibility}
 
 
-\author{Patrick Eades}{University of Sydney}{patrick.eades@sydney.edu.au}{}{}
-\author{Ivor van der Hoog}{Utrecht University}{i.d.vanderhoog@uu.nl}{}{}
-\author{Maarten Löffler}{Utrecht University}{m.loffler@uu.nl}{}{}
-\author{Frank Staals}{Utrecht University}{f.staals@uu.nl}{}{}
-\authorrunning{P. Eades, I. van der Hoog, M. L\"offler, and F. Staals}
-\Copyright{Patrick Eades, Ivor van der Hoog, Maarten L\"offler, and Frank Staals}%mandatory, please use full first names. LIPIcs license is "CC-BY";  http://creativecommons.org/licenses/by/3.0/
+%\author{Patrick Eades}{University of Sydney}{patrick.eades@sydney.edu.au}{}{}
+%\author{Ivor van der Hoog}{Utrecht University}{i.d.vanderhoog@uu.nl}{}{}
+%\author{Maarten Löffler}{Utrecht University}{m.loffler@uu.nl}{}{}
+%\author{Frank Staals}{Utrecht University}{f.staals@uu.nl}{}{}
+%\authorrunning{P. Eades, I. van der Hoog, M. L\"offler, and F. Staals}
+%\Copyright{Patrick Eades, Ivor van der Hoog, Maarten L\"offler, and Frank Staals}%mandatory, please use full first names. LIPIcs license is "CC-BY";  http://creativecommons.org/licenses/by/3.0/
+
+\author{Anonymous Authors}{Anonymous Affiliations}{}{}{}
+\authorrunning{Anonymous Authors}
+\Copyright{Anonymous Authors}
+
+\keywords{trajectories, visibility, data structures, semi-algebraic range searching}
+\ccsdesc[500]{ Theory of computation ~ Design and analysis of algorithms}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-  \frank{we should write an abstract}
+  We study the problem of testing whether two entities moving along different piece-wise linear trajectories among polygonal obstacles are, at any time, mutually visible.
+  We study several variants, depending on whether the obstacles are a simple polygon, whether trajectories may intersect the polygon edges, and whether both or only one of the entities are moving.
+  
+  For trajectories of constant length, we provide a simple $O(n)$ time algorithm for the simple polygon case, where $n$ is the number of polygon vertices.
+  The general case can be solved in $O(n \log n)$ time, which we show to be tight.
+  In the intermediate case, where the obstacle is a simple polygon but the trajectories may intersect its edges, a small gap between the lower and upper bound remains.
+  
+  Next, we consider the data structure question of preprocessing the obstacles such that queries consisting of two single line segments can be efficiently answered.
+  We show that for all variants it is possible to answer queries in sublinear time using polynomial space and preprocessing. 
+  Query times range from $O(\log n)$ to $O(n^{\frac34 + \eps})$ or $O(\log^k n)$ for constant but large $k$,
+  preprocessing times range from $O(n \log n)$ to $O(n^{3k})$.
+  
+  As an intermediate step, we provide an efficient solution to a problem which we believe to be of independent interest: proprocess a convex polygon such that we can efficiently test intersection with a hyperbolic curve segment.
 \end{abstract}
 
 
@@ -118,9 +139,9 @@ We refer the reader to the excellent survey by Gudmundsson~\etal~\cite{Gudmundss
 \subparagraph {Visibility.}
 Two objects, amidst a number of obstacles, are mutually \emph{visible} if the segment between them is not obstructed. 
 Visibility is one of the most studied topics in computational geometry~\cite {moet,welzl1985constructing,POCCHIOLA1996279}
-and in adjacent fields such as computer graphics~\cite {Durand00amultidisciplinary}, Geographic Information Science (GIS)~\cite{FM03}, and robotics~\cite {moet}, to name just a few.
+and in adjacent fields such as computer graphics~\cite{durand2000multidisciplinary}, Geographic Information Science (GIS)~\cite{FM03}, and robotics~\cite {moet}, to name just a few.
 Within computational geometry, Gosh and Giswani compiled a survey of {\em unsolved} problems in this area~\cite {Ghosh:2013:UPV:2543581.2543589}.
-Core visibility problems in computational geometry include {\em ray shooting}~\cite{10,13,17,20}, guarding~\cite {Chvatal75,Fisk78,survey} and visibility graph recognition~\cite{cardinal2017recognition}.
+Core visibility problems in computational geometry include {\em ray shooting}~\cite{agarwal1993ray,de1993ray,chazelle1994ray}, guarding~\cite {Chvatal75,Fisk78,safak2009art} and visibility graph recognition~\cite{cardinal2017recognition}.
 For more information about visibility problems, refer to O'Rourke's book \cite{ORourke87} ch. 28, and the surveys by Durant \cite{durand2000multidisciplinary} and Gosh~\cite{Ghosh:2013:UPV:2543581.2543589}. 
 
 \subparagraph {Trajectory visibility.}
@@ -139,33 +160,35 @@ For more information about visibility problems, refer to O'Rourke's book \cite{O
 	\label{fig:variants}
 \end{figure}
 
-Somewhat surprisingly, given the amount of research on both trajectories and visibility, not much previous work exists on their combination.
-%
-In this paper, we study the following fundamental question:
-  given a simple polygon or polygonal domain $P$ with $n$ vertices and given two entities $q$ and $r$ that both traverse a trajectory of $\tau$ vertices each, is there a time $t$ at which two entities see each other?
-  We assume that $q$ and $r$ move with constant (but possibly different) speeds between trajectory vertices, and cannot see though the edges of $P$.
-  We distinguish several variants depending on whether $P$ is a simple polygon or a polygonal domain, and whether the trajectories are allowed to intersect $P$ (i.e. vehicles moving through fog, animals moving though foliage) or not (e.g. pedestrians moving among buildings, ships moving on water bodies). Refer to Figure~\ref {fig:variants}.
+
+
+In this paper, we study the following fundamental question, which we refer to as {\em trajectory visibility} testing.
+  Given a simple polygon, or a polygonal domain, $P$, and the trajectories of two moving entities $q$ and $r$, is there a time $t$ at which $q$ and $r$ can see each other?
+  We assume that $q$ and $r$ move linearly with constant (but possibly different) speeds between trajectory vertices, and cannot see though the edges of $P$.
+  We distinguish several variants depending on whether $P$ is a simple polygon or a polygonal domain, and whether the trajectories are allowed to intersect $P$ (e.g. vehicles moving through fog, animals moving though foliage) or not (e.g. pedestrians moving among buildings, ships moving on water bodies). Refer to Figure~\ref {fig:variants}.
+  We further consider the same variants in the simpler scenario in which one of the entities is a point (e.g. a stationary guard and a moving intruder).
 %
 %Part of the reason may be that studying trajectories in {\em context} is still relatively new area, and context is essential for meaningful question.
 %On the other hand, the role of {\em time} is essential in this scenario: we are not interested whether there exists visibility between two geometric shapes, but rather whether there exists a {\em time} at which two point objects are visible. This makes the question fundamentally different from existing work in visibility.
 
 Note that we are only interested in whether there {\em
   exists} a time at which the two entities see each other. % (more complex questions may be considered, we start with the most basic version; refer also to Section~\ref {sec:conclusions}).
-This implies we can decompose the problem: the answer is {\em no} if and only if the answer is no between all two consecutive time stamps.
-When considering this question, two fundamentally different approaches come to mind. On the one hand, when $\tau$ is small compared to $n$, the best approach may be to simply solve the problem for each time interval separately. On the other hand, when $\tau$ is large compared to $n$, it may be more efficient to spend some time on preprocessing $P$ first, if this allows us to spend less time per time interval.
-We therefore distinguish between the {\em algorithmic} and the {\em data structure} question. \patrick{This seems like an odd argument to me}
-
-\subparagraph {Data structures for visibility.}
-
-Data structures for point-to-point visibility are well-known. 
-Chazelle \etal~\cite{chazelle1994ray} present a linear-size data structure on a simple polygon $P$ which for any ray originating from a point, can determine the first edge hit by the ray in logarithmic time. Entity $r$ is visible from $q$ if and only if the ray from $q$ to $r$ does not hit an edge before reaching $r$. Guibas and Hersberger \cite{guibas1989optimal} present a linear-size data structure on a simple polygon which can return the shortest path between a pair of query points in logarithmic time. Note that $q$ and $r$ are mutually visible if and only if their shortest path is a single line segment.
-Guibas and Hershberger's work concludes a series of triangulation-based shortest path algorithms for a simple polygon including Lee and Preparata \cite{LeeP84}, Reif and Storer \cite{ReifS85} and Guibas~\etal~\cite{GuibasHLST87}.
-Lee and Preparata \cite{LeeP84} find the shortest path (and with it the visibility) between two points in a simple polygon in linear time, if linear time triangulation is used.
-%which implicitly solves visibility between two points.
+This implies we can temporaly decompose the problem: the answer is {\em no} if and only if the answer is no between all two consecutive time stamps.
+When considering this question, two fundamentally different approaches come to mind.
+On the one hand, when the number of trajectory vertices $\tau$ is small compared to the number of polygon vertices $n$, the best approach may be to simply solve the problem for each time interval separately. 
+On the other hand, when $\tau$ is large compared to $n$, it may be more efficient to spend some time on preprocessing $P$ first, if this allows us to spend less time per trajectory edge.
+We therefore distinguish between the {\em algorithmic} and the {\em data structure} question. 
+%\maarten {In the full version, we should also define the algorithmic problem of finding optimal dependence on $n$ and $\tau$.}
 
 
-Visibility of a moving object is an old subject that recently has gained attention within the computational geometry community. Bern \etal~\cite{bern1994visibility} and  Mulmuley \cite{mulmuley1991hidden} study maintaining the visibility polygon of a point that moves over a straight path. 
+\subparagraph {Related work on visibility for moving entities.}
+
+Somewhat surprisingly, given the amount of research on both trajectories and visibility, not much previous work exists on their combination.
+%Visibility of a moving object is an old subject that recently has gained attention within the computational geometry community. 
+Bern \etal~\cite{bern1994visibility} and  Mulmuley \cite{mulmuley1991hidden} study maintaining the visibility polygon of a point that moves over a straight path. 
 Aronov \etal~\cite{aronov2002visibility} demonstrate a kinetic algorithm that tracks the visibility polygon of a moving query point $q$. The most recent result on visibility and motion is by Diez \etal~\cite{DKRRS2017KineticAPSPEuroCG} who show how to maintain the shortest path between two moving entities using a kinetic data structure. $q$ and $r$ are mutually visible if and only if their shortest path is a line segment, however as $q$ and $r$ traverse their trajectory there might be a linear number of kinetic events. A large body of work exists on the complementary problem of planning trajectories under visibility constraints~\cite{6907405}.
+
+
 
 
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
@@ -177,18 +200,18 @@ Aronov \etal~\cite{aronov2002visibility} demonstrate a kinetic algorithm that tr
           &     &     &           & space & preprocessing & query & \\
         \midrule
         %
-        $\bullet$ & $\bullet$ & S or I &  $\mathcal{O}(n \log n)$ & $\Theta(n)$ & $\Theta(n)$ & $\Theta(\log n)$ & \cite{guibas1989optimal} \\
-                  &           & D      & $\mathcal{O}(n \log n)$ & $\mathcal{O}()$ & $\mathcal{O}()$ & $\mathcal{O}()$ & \cite{POCCHIOLA1996279}
+        $\bullet$ & $\bullet$ & S or I &  $\Theta(n)$ & $\O(n)$ & $\Theta(n)$ & $\Theta(\log n)$ & \cite{guibas1989optimal} \\
+                  &           & D      & $\Theta(n)$ & $\mathcal{O}(n^2)$ & $\mathcal{O}(n^2)$ & $\Theta(\log n)$ & \cite{POCCHIOLA1996279}
         \\[0.6em]
         %
-        $\bullet$ & $\slash$ & S & $\mathcal{O}(n \log n)$ & $\Theta(n)$ & $\mathcal{O}(n \log n)$ & $\Theta(\log n)$ & Section~\ref{sec:pointline} \\
-                  &          & I & $\mathcal{O}(n \log n)$ & $\mathcal{O}(n^{2} \log n)$ & $\mathcal{O}(n^{2 })$ & $\mathcal{O}(n^{\frac{3}{4}} \log n)$ & Section~\ref{sec:pointline} \\
-                  &          & D & $\Theta(n \log n)$ & $\mathcal{O}(n^4 \log n)$ & $\mathcal{O}(n^{4  })$ & $\mathcal{O}(n^{\frac{3}{4} } \log n)$ &  Section~\ref{sec:pointline}
+        $\bullet$ & $\slash$ & S & $\Theta(n)$ & $\O(n)$ & $\mathcal{O}(n \log n)$ & $\Theta(\log n)$ & Section~\ref{sec:pointline} \\
+                  &          & I & $\mathcal{O}(n \log n)$ & $\mathcal{O}(n^{2} \log^3 n)$ & $\mathcal{O}(n^{2}\log^3 n)$ & $\mathcal{O}(n^{\frac{3}{4}+\varepsilon})$ & Section~\ref{sec:pointline} \\
+                  &          & D & $\Theta(n \log n)$ & $\mathcal{O}(n^4 \log^3 n)$ & $\mathcal{O}(n^{4} \log^3 n)$ & $\mathcal{O}(n^{\frac{3}{4} + \varepsilon})$ &  Section~\ref{sec:pointline}
         %
         \\[0.6em]
-        $\slash$ & $\slash$ & S & $\mathcal{O}(n \log n)$ & $\mathcal{O}(n \log n)$ & $\mathcal{O}(n^{1 })$ & $\mathcal{O}(n^{\frac{3}{4}}\log^2 n)$ & Section~\ref{sec:lineline} \\
-                 &          & I & $\mathcal{O}(n \log n)$ & $\mathcal{O}(n^{c})$ & $\mathcal{O}(n^{c})$ & $\mathcal{O}(\log^c n)$ & Section~\ref{sec:lineline}  \\
-                 &          & D & $\Theta(n \log n)$ & $\mathcal{O}(n^c)$ & $\mathcal{O}(n^{c })$ & $\mathcal{O}(\log^c n)$ & Section~\ref{sec:lineline} \\
+        $\slash$ & $\slash$ & S & $\Theta(n)$ & $\mathcal{O}(n \log^5 n)$ & $\mathcal{O}(n^{1}\log^5 n)$ & $\mathcal{O}(n^{\frac{3}{4}}\log^2 n)$ & Section~\ref{sec:lineline} \\
+                 &          & I & $\mathcal{O}(n \log n)$ & $\mathcal{O}(n^{3k})$ & $\mathcal{O}(n^{3k})$ & $\mathcal{O}(\log^k n)$ & Section~\ref{sub:Polygonal_Domain}  \\
+                 &          & D & $\Theta(n \log n)$ & $\mathcal{O}(n^{3k})$ & $\mathcal{O}(n^{3k})$ & $\mathcal{O}(\log^k n)$ & Section~\ref{sub:Polygonal_Domain} \\
         \bottomrule
     \end{tabularx}
         \caption{Results using partition trees. The two left-most
@@ -196,267 +219,465 @@ Aronov \etal~\cite{aronov2002visibility} demonstrate a kinetic algorithm that tr
           or line segment ($\slash$). The third column specifies if
           the domain $P$ is a simple polygon (S), a polygon where the
           query segments may intersect $P$ (I) or a polygonal domain
-          with $n$ vertices (D). \frank{Check these results; I'm not
-            sure I believe the $O(n)$ bounds for the algorithmic problems}\ivor{Changed the times of the algorithmic results. Frank, can you fill in the row for two points in a domain? I do not understand paper [35]}}
+          with $n$ vertices (D). In the last rows, $k$ is an unspecified constant. 
+        }
     \label{tab:results}
-    % \vspace{-20pt}
+    %\vspace{-20pt}
 \end{table}
 
 \subparagraph {Our Results.}
-  Our results for when the two trajectories are single line segments are summarized in Table~\ref {tab:results}; we additionally consider the case where both are points (the entities are stationary) for comparison, and the case where {\em one} entity is a point and the other is a segment as an easier version of the problem leading up to our more general results.
+  We focus on trajectories of at most two vertices.
+  Our results are summarized in Table~\ref {tab:results}.
  %
-  In Section~\ref{sec:alg}, we discuss our algorithmic results.
-  If we are allowed to preprocess $P$ we use multi-level data structures. As the base level of these structures we either use the shortest path structure from Guibas and Hershberger \cite{guibas1989optimal} or the visibility polygon retrieval structure from Aronov \etal~\cite{aronov2002visibility}. At the top level we transform the visibility query into an intersection query between an algebraic query object and a pre-stored geometric object from the lower levels. There we encounter a sub-problem of independent interest: can we preprocess a convex polygon $P'$ such that we can answer intersection queries with degree-2 curve segments in sublinear time. 
+  In Section~\ref{sec:oneshots}, we discuss our algorithmic results; we build on the geometric structure from this section in the remainder of the paper.
+  In Section~\ref{sec:prelims} we consider the sub-problem of preprocessing a convex polygon $P'$ for intersection queries with quadratic curve segments.
+  We then extend the solution in Section~\ref{sec:lineline} to a data structure for preprocessing $P$ using multi-level data structures. 
+  In Section~\ref{sec:variants}, we sketch our solutions to the remaining variants of the problem.
+  In Section~\ref{sub:Polygonal_Domain}, we investigate the degree in which our solution from Section~\ref{sec:lineline} can be extended to the cases where $P$ is a polygonal domain. The techniques are similar but the resulting data structure requires much more space.
+  In Section~\ref{sec:pointline}, we study the more restricted problem in which one of the entities is stationary. We show that these problems can be solved with a different approach that is more efficient.
+
+  Due to space constraints, several proofs and the full description of all results is deferred to the appendix.
+
+\section{An algorithm for testing visibility}
+\label{sec:oneshots}
+
+Let $P$ be a polygonal domain with $n$ edges and $q$ and $r$ be two line segments in the plane (possibly of length 0). We first present an $\O(n\log n)$ time algorithm to solve the visibility problem for $q,r$ and $P$ and we show this algorithm is tight in the worst case. Finally, we show how to solve the visibility problem in linear time in the case where $P$ is a simple polygon and $q$ and $r$ are contained in $P$.
+
+\subparagraph{An $O(n \log n)$ time algorithm.}
+The entities $q$ and $r$ each move along a line segment with constant speed (depending on the length of the line segment) during the time interval $[0,1]$.\footnote {With slight abuse of notation, we use $q$ and $r$ to refer to both the (moving) entities and their trajectory.}
+Consider the line $g(t)$ through the entities at time $t$.
+We dualize this line to a point using classical point-line dualization (i.e. we map the line $y = ax + b$ to the point $(a, -b)$); this point now traces a segment of a curve $\gamma : [0,1] \to \R^2$ in the dual space.\footnote {Throughout this paper we follow the convention of using latin letters for objects in primal space and greek letters for their duals.}
+
+\begin{lemma}
+  \label{lemma:hyperbola}
+  The segment $\gamma$ is a segment of a hyperbolic curve with $5$ degrees of freedom.
+\end{lemma}
+
+Let $e$ be an edge of $P$ and denote by $L_e$ the set of lines intersecting $e$. 
+The dual of $L_e$ is a {\em wedge} $\Lambda_e$~\cite{de1997computational}. If the segment between $q$ and $r$ is blocked by $e$ at time $t$ then $g(t)$ must lie in $L_e$. 
+In the dual, this means that the curve segment $\gamma$ must intersect $\Lambda_e$.
+There are at most two connected time intervals where a quadratic curve segment $\gamma$ can intersect a wedge $\Lambda_e$; it follows that each edge $e$ has at most two connected time intervals where it blocks the visibility between $q$ and $r$.
+This leads to a straightforward general algorithm to test if there is a time at which $q$ can see $r$: for each edge $e \in P$, we compute the at most two time intervals where it blocks visibility between $q$ and $r$ in constant time. 
+We sort these time intervals in $\O(n \log n)$ time and check if their union covers the time interval $[0,1]$.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics{../reduction}
+    \caption{The reduction for when $P$ is a polygonal domain with $\Omega(n)$ holes.}
+    \label{fig:reduction}
+\end{figure}
+
+\begin{theorem}
+  \label{thm:algorithm_general}
+  Given a polygonal domain $P$ with $n$ vertices and moving entities $q$ and $r$, we can test trajectory visibility in $\mathcal{O}(n \log n)$ time.
+\end{theorem}
+
+\subparagraph{An $\Omega(n \log n)$ lower bound.}
+If $P$ is a polygonal domain with $\Omega(n)$ holes, this result is tight: suppose we are given a set of $n$ numbers $A$ and we want to know if $A = B$ for a given arbitrary sorted set $B = \{x_1,x_2, \ldots x_n \}$. 
+Ben-Or~\cite{ben1983lower} shows that this problem has an $\Omega(n \log n)$ lower bound in the algebraic decision tree model. 
+This leads to the following reduction (illustrated in Figure~\ref{fig:reduction}): we construct a set of $n$ horizontal edges whose $y$-coordinates are $0$ and whose $x$-coordinates are $\{ (x_{i} - \varepsilon, x_{i+1} + \varepsilon ) \mid i \in [1, n-1] \}$ where $\varepsilon$ is smaller than the minimal difference between two consecutive numbers in $B$, a value for $\varepsilon$ can be found in linear time since $B$ is sorted.
+For each of the $n$ numbers $x \in A$ we construct the vertical edge from the point $(x, 1)$ to $(x,2)$ with a width of $\varepsilon$. 
+The entity $q$ walks from the point $(1,-1)$ to $(n, -1)$ and entity $r$ walks from $(1,3)$ to $(n, 3)$. 
+Suppose the number $x_j$ from $B$ is not in $A$, then $q$ can see $r$ at the $x$-coordinate $x_j$. 
+Note that this construction also extends to the case where one of the two entities is stationary: consider the cone between the stationary entity $q$ and a horizontal line segment trajectory $r$: we can transform the set $B$ into a set of $n$ horizontal edges that cut in the cone between $q$ and $r$. 
+Each number $x \in A$ gets transformed not to a vertical edge, but an edge that lies on a ray from $q$ to $r$.
+
+
+
+\begin{theorem}
+    Given a polygonal domain $P$ with $n$ vertices and moving entities $q$ and $r$, testing trajectory visibility has an $\Omega(n \log n)$ time lower bound.
+\end{theorem}
+
+
+\subparagraph{A linear-time algorithm for when $P$ is a simple polygon and
+  $q,r \subset P$.}  Any segment between $q$ and $r$ that is contained in $P$
+is the shortest path in $P$ between those two points on $q$ and $r$. Guibas and
+Hershberger~\cite{guibas1989optimal} define for any two segments $q$ and $r$ in
+a simple polygon $P$, the \emph{hourglass} $H(q,r)$ to be the union of all
+shortest paths between points on $q$ and $r$. The hourglass $H(q,r)$ is a subset of $P$
+and bounded by the segments $q$ and $r$ and by two shortest paths.
+The {\em ``upper'' chain} is the shortest path between the upper end points $p_q^+$ $p_r^+$ of $q$ and $r$,
+and the {\em ``lower'' chain} is the shortest path between $p_q^-$ and $p_r^-$ (refer to Figure~\ref{fig:visibilityglass}). 
+We define the \emph{visibility glass} $L(q,r)$ as the (possibly
+empty) union of \emph{line segments} between $q$ and $r$ that are
+contained in $P$. Notice that $L(q,r)$ is a subset of $H(q,r)$.
+ 
   
-  In Section~\ref{subsec:intersectionsearch} we present the solution to this sub-problem. The techniques in Section~\ref{subsec:intersectionsearch} are used throughout this paper. Section~\ref{sec:pointline} contains the data structure for when one entity is stationary and the data structure for two moving entities is presented in Section~\ref{sec:lineline}.
+ \begin{figure}[h]
+    \centering
+    \includegraphics[]{../visibilityglass}
+    \caption{(left) $H(q,r)$ in orange. The path from $p_q^+$ to $r_q^-$ shown  as a dotted path. (middle) only the bitangent on this path starts in clockwise and ends in counterclockwise rotation. (right) Using the bitangents, we identify the endpoints of $q'$ and $r'$ and obtain $L(q,r)$ in grey. \ivor{make convex homepc}}
+    \label{fig:visibilityglass}
+\end{figure}
+
+ 
+
+ 
+\begin{observation}
+  \label{obs:obtain_L}
+  For any two segments $q, r \in P$, there exist segments
+  $q' \subset q, r' \subset r$ s.t. $L(q, r) = H(q', r')$. Moreover, $q'$ and
+  $r'$ are bound by two bitangents on the shortest paths between the endpoints of $q$ and $r$.
+\end{observation}
+
+\begin {proof}
+Suppose that the upper and lower chain of $H(q,r)$ share a vertex. Then the visibility glass $L(q,r)$ is either a single segment or empty and thus we can either find two points $q'$ and $r'$ on $q$ and $r$ whose line segment forms $H(q', r') = L(q,r)$ or $q'$ and $r'$ are empty. 
+
+If the upper and lower chain do not share a vertex then these chains are semi-convex~\cite{guibas1989optimal}. Consider the path from $p_q^+$ to $p_r^-$, this path has one edge $(u,v)$ connecting the upper and lower chain. This is the unique edge for which the path makes a clockwise turn at $u$ and a counterclockwise turn at $v$ or vice versa. Consider the corresponding edge that we obtain from the path between $p_q^-$ and $p_r^+$. The extension of these edges bound $q'$ and $r'$~\cite{Chazelle1989}.
+\end {proof}
+
+
+Chazelle and Guibas~\cite{Chazelle1989} note that (the supporting lines of) all
+line segments in $L(q,r)$ can be dualized into a convex polygon of linear
+complexity which we denote by $\Lambda(q,r)$.\footnote {If $L(q,r)$ contain vertical lines, it will dualize into a pair of unbounded convex regions. For simplicity of exposition, we assume this is not the case; our results can be adapted to deal with degeneracies.}
+A shortest path between two points in
+$P$ can be computed in linear time~\cite{GuibasHLST87}. Finding the bitangents also takes linear time. It follows that we can compute $L(q,r)$ and its dual $\Lambda(q,r)$ in linear time.
+Suppose we are given two entities $q$ and $r$ that each traverse a line segment in a simple polygon $P$. 
+We noted earlier that the line $g(t)$ through $q$ and $r$ traces a hyperbolic segment $\gamma$ in the dual.
+
+\begin{observation}
+  \label{obs:visible}
+  Entities $q$ and $r$ are mutually visible at time $t$ if
+  $\gamma(t)$ lies in $\Lambda(q,r)$.
+\end{observation}
+\begin {proof}
+The entities can see one another at time $t$ if and only if $g(t) \in L(q,r)$.
+\end {proof}
+
+
+
+We can derive $\gamma$ in constant time, construct $\Lambda(q,r)$ in linear time, and we can check if a quadratic curve intersects a convex polygon in linear time. Thus we conclude:
+
+\begin{theorem}
+  \label{thm:algorithm_simple_polygon}
+  Given a simple polygon $P$ with $n$ vertices and two entities $q$ and $r$
+  moving linearly inside $P$, we can test trajectory visibility in $\Theta(n)$ time.
+\end{theorem}
+
+
+
+
 
   
-\section{Preliminaries}
+\section{Intersecting a convex polygon with an algebraic curve}
 \label{sec:prelims}
+We now turn our attention to the data structure question: can we preprocess $P$ such that trajectory visibility may be tested efficiently (i.e. in sublinear time) for a {\em query} pair of segments $q$, $r$.
+By Observation~\ref {obs:visible}, we know that we may phrase such a query as an intersection between a hyperbolic curve segment and a convex polygon.
+Note, however, that both the curve segment and the convex polygon depend on the query segments $q$ and $r$.
+As an intermediate step, we study a simplified problem in this section, which we believe to be of independent interest;
+we will use the solution to this question as a subroutine in Section~\ref {sec:lineline}.
+Let $P'$ be a convex polygon with $n$ edges. Is it possible to preprocess $P'$ such that for any quadratic curve segment $\gamma$, we can quickly test if $\gamma$ intersects $P'$? 
 
-\frank{Maybe a better name than just Preliminaries?}
 
-\frank{Actually, this is more about linearization then about
-  semi-alg. range searching no?. I.e. We don't care about range
-  searching, but about intersection searching!} \patrick[is]{inclined to agree}
-
-
-\frank{I don't think we should be calling the regions $G$, since we
-  are calling one of the transformation functions $g$. That is
-  confusing.}  \subparagraph{Semi-algebraic range searching.}  Let $X$
+\subparagraph{Semi-algebraic range searching.}  Let $X$
 be a set of $n$ geometric objects in $\mathbb{R}^d$, where each object
 is parametrized by a vector $\vec{x}$ (e.g. a point is parametrized by
 a vector of its coordinates). Let $\Gamma$ be a family of geometric
 regions (called semi-algebraic ranges) in $\mathbb{R}^d$ where each
 region $G \in \Gamma$ is bound by an algebraic curve $\gamma$ which is
 parametrized by a vector
-$\vec{a}$. Agarwal~\etal~\cite{agarwal2013range} are interested in
-preprocessing $X$, such that for any range $G \in \Gamma$, we can
+$\vec{a}$. Agarwal~\etal~\cite{agarwal2013range} describe how to 
+preprocess $X$, such that for any range $G \in \Gamma$, we can
 efficiently count the number of objects of $X$ intersecting $G$. Let
-$F$ be a function mapping (the parameterizations of) $x$ and $G$ to
+$F$ be a function mapping (the parameterizations of) $x \in X$ and $G \in \Gamma$ to
 $\R$ such that $F(\vec{x},\vec{a}) \leq 0$ if and only if $x$ and $G$
-intersect. Agarwal \etal show that if $F$ can be written in the form
-$F(\vec{x}, \vec{a}) = g_0(\vec{a}) + \sum_{i=1}^k
-g_i(\vec{a})f_i(\vec{x})$, where $f_i$ and $g_i$ are polynomials
-dependent only on $\vec{x}$ and $\vec{a}$, respectively, then there is
-a function $f$ that maps the objects in $X$ to points in $\R^k$, and a
-function $g$ that maps the ranges in $\Gamma$ to halfspaces in $\R^k$,
-such that $f(x) \in g(G)$ if and only if $x$ intersects $G$. Hence,
-this so called \emph{linearization} process transforms a
-$d$-dimensional semi-algebraic range searching problem into a
-halfspace range counting problem into $\mathbb{R}^k$.
+intersect.
+Agarwal \etal show that if $F$ can be written in the form $F(\vec{x}, \vec{a}) = g_0(\vec{a}) + \sum_{i=1}^k g_i(\vec{a})f_i(\vec{x})$ (where $f_i$ and $g_i$ are polynomials dependant only on $\vec{x}$ and $\vec{a}$, respectively) then there is a function $f$ that maps the objects in $X$ to points in $\R^k$, and a function $g$ that maps the ranges in $\Gamma$ to halfspaces in $\R^k$, such that $f(x) \in g(G)$ if and only if $x$ intersects $G$. 
+This so-called \emph{linearization} process transforms a $d$-dimensional semi-algebraic range searching problem into a halfspace range searching problem into $\mathbb{R}^k$.
+Refer to Appendix~\ref{appx:introduction} for more information about algebraic range searching and examples.
 
-The resulting set of $n$ points in $\R^k$ can be stored in a data
-structure of linear size such that the points in a query halfspace can
-be counted in $O(n^{1-\frac{1}{k}})$ time (with high
-probability)~\cite{chan2012optimal}. Testing if a query halfspace is
-empty can be done in expected $O(n^{1-\frac{1}{k/2}})$ time. Data
-structures with a slightly slower deterministic query time are also
-known~\cite{chan2012optimal}. If we are willing to use (much) more
-space, faster query times are also
-possible~\cite{Mat1993,chan2012optimal}.
-
-\frank{I think the remainder of this paragraph can go into the
-  appendix} Specifically, Agarwal \etal prove that you can map any
-$d$-dimensional point $\vec{x}$ to the $k$-dimensional point
-$f(\vec{x}) = (f_1(\vec{x}), f_2(\vec{x}), \dots f_k(\vec{x}))$, and
-any query range to the $k$-dimensional halfspace
-$G(\vec{a}) = \left\{ \vec{y} \in \mathbb{R}^k \mid g_0(\vec{a}) +
-  \sum_i^k g_i(\vec{a})y_i \le C \right\}$ and that $\vec{x}$
-intersects $G$ if and only if $f(\vec{x})$ is contained in
-$G(\vec{a})$.
-
-Refer to Appendix~\ref{appx:rangesearch} for more
-information about semi-algebraic range searching.
+The resulting set of $n$ points in $\R^k$ can be stored in a data structure of linear size such that the points in a query halfspace can be counted in $O(n^{1-\frac{1}{k}})$ time (with high probability)~\cite{chan2012optimal}.
+Testing if a query halfspace is empty can be done in expected $O(n^{1-\frac{1}{k/2}})$ time. 
+Data structures with a slightly slower deterministic query time are also
+known~\cite{chan2012optimal}. 
+If we are willing to use (much) more space, faster query times are also possible~\cite{chan2012optimal,Mat1993}.
 
 
-% \subparagraph{Halfspace range queries.} 
+\subparagraph{Semi-algebraic range searching and our intersection query.}
+The $n$ edges of a simple polygon $P'$ are algebraic objects.
+A natural parametrization for an arbitrary edge $e \in P'$ would be a 4-dimensional vector $\vec{x}_e$ specifying its start and end point. 
+A quadratic curve segment $\gamma$ per definition is an semi-algebraic range parametrized by its own parameters $\vec{a}_\gamma$. 
+If we want to apply semi-algebraic range searching, we need to design a predicate function $F(\vec{x}_e, \vec{a}_\gamma)$ that outputs a negative real number whenever the edge $e$ is intersected by $\gamma$. 
 
-% Semi-algebraic range searching transforms an intersection query into a $k$-dimensional halfspace range query. $k$-dimensional halfspace range searching can be solved using partition trees \cite{chan2012optimal} which use $\Theta(n)$ space, $\mathcal{O}(n \log n)$ preprocessing time and have an expected query time of $\mathcal{O}(n^{1 - \frac{1}{k}})$ (worst-case bounds exists with an additional polylog factor). Halfspace emptyness queries (which are used to determine \emph{if} there is an intersection) have $\mathcal{O}(n^{1 - \frac{2}{k+1}})$ query time. Alternatively one can use cutting trees \cite{chazelle1993cutting} which use $\mathcal{O}(n^k)$ space and preprocessing time but achieve $\mathcal{O}(\log^k n)$ query time.
+It is tempting to immediately construct such a predicate function using the parameters $\vec{x}_e$ and $\vec{a}_\gamma$ only (ignoring geometric facts such as the convexity or connectedness of $P'$). 
+However, we have to linearize the resulting predicate function $F(\vec{x}_e, \vec{a}_\gamma)$ into $k$ terms. 
+The more complex the description of the objects, the query and their intersection the more complex the predicate will be and therefore the higher this number $k$ will be.
+In Appendix~\ref{sub:intersecting_line_segments_with_a_quadratic__curve_segment} (Lemma~\ref{lemma:15000}) we show that it is indeed possible to apply semi-algebraic range searching only in the parametrizations of an arbitrary edge $e$ and curve segment $\gamma$.
+This transforms the intersection query between a set $E$ of $n$ \emph{arbitrary edges} and a degree-2 curve segment $\gamma$ into four consecutive halfspace emptyness problems in $\R^k$, where $k \approx 15 000$. 
+While this leads to a linear-size data structure with sub-linear  %($O(n^{1-\frac{1}{15 000}})$) 
+query time, we can do better.
+%Instead, we employ an approach that we will use throughout this paper. We make several observations about the ways in which a convex polygon $P'$ can be intersected by a degree-2 curve. Many types of intersections can be detected using conventional geometric data structures. This leaves us with a more restricted case of an intersection between $\gamma$ and $P'$ that conventional data structures cannot find. Since this is a more restricted problem, it can be linearized to a much lower dimension ($\mathbb{R}^5$).
+
+\subparagraph{Geometry of our intersection query.}
+
+Let $P'$ be a simple polygon with $n$ edges. Let $\gamma$ be a quadratic curve segment ending in the points $s$ and $z$ and let $\Gamma$ denote the
+unique degree-2 curve $\Gamma \supset \gamma$ given by
+$a_1 x^2 + a_2 x + a_3 xy + a_4 y + a_5 y^2 + a_6 = 0$. We say 
+$\vec{a} = (a_1, \ldots, a_6)$. Observe (Figure~\ref{fig:intersectionsearch}) that if $\gamma$ intersects
+$P'$, then either (a) an endpoint $s$ or $z$ lies in $P'$, or (b) $\gamma$ cuts
+off a vertex, or (c) $\gamma$ intersects only a single edge of $E$ twice and has no
+endpoint in $P_E$ (we call this \emph{dipping}). Intersections of type $(a)$
+and $(c)$ can be identified with a regular binary search on on $P'$. An
+intersection of type $(b)$ is detected using algebraic range searching.
 %
-
-\frank{Actually, I would suggest to maybe move this part to somewhere
-  in the beginning of this section.}
-\subparagraph{An example: intersecting line segments with a quadratic
-  curve segment.} We consider the problem of storing a set of line
-segments $E$ such that we can efficiently test if a query curve
-segment $\gamma$ described by a degree-2 polynomial intersects with a
-segment in $E$. In Appendix~\ref{appx:rangesearch} we show that this
-problem can indeed be transformed into a halfspace emptyness problem
-in $\R^k$, where $k=15 000$. So, while this leads to a linear size
-data structure with sublinear query time ($O(n^{1-\frac{1}{75 00}})$),
-this result may not be very practical.
-
-
-\frank{Decide what to do with the rest }
-
-Applying semi-algebraic range searching works in two steps: first you
-algebraically describe what query you are interested in. Then you
-linearize the predicate function into $k$ terms. This transforms the
-algebraic intersection query into $k$-dimensional halfspace range
-searching.
-
-It might be tempting to immediately employ algebraic range searching
-and search for an intersection between the edge set $E$ and $\gamma$
-(ignoring geometric facts such as the convexity of $P$).
-
-However the more complicated the algebraic expression, the higher the number $k$ will be. In Appendix~\ref{appx:rangesearch} we prove the following lemma which leads to a result which might be sub-linear, but not very practical. 
-
-\begin{lemma}
-\label{lemma:15000}
-We can preprocess a set $E$ of \emph{arbitrary} line segments using $\mathcal{O}(n)$ space and $\mathcal{O}(n)$ construction time, such that an intersection (if any exists) between an arbitrary degree-2 curve segment $\gamma$ and an edge in $E$ can be found in $\mathcal{O}(n^{1-\frac{1}{15000}})$ time.
-\end{lemma}
-\frank{I don't believe the preprocessing time, that should be $O(n\log
-  n)$ no? Also, I reformulated this Lemma statement in the
-  appendix. Use that if we keep the Lemma here.}
-
-\frank{In light of the $k/2$ for just emptyness I think this should
-  become $O(n^{1-1/7500})$ no?}
-
-\section{An algorithm for testing visibility}
-\label{sec:oneshots}
-
-Let $P$ be a polygonal domain with $n$ edges, and let $q$ and $r$ be the entities moving along line segments (potentially intersecting $P$). We now describe a simple $\O(n\log n)$ time algorithm to solve this problem, and show this bound is tight in the worst case. Finally, we show how to solve the problem in linear time in the case $P$ is a simple polygon.
-
-Fix an edge $e$, and consider the times at which $e$ blocks visibility between $q$ and $r$, these times consist of up to two sub-intervals of $[0, 1]$, which can be computed in constant time. Thus $n$ line segments induce a set of $\mathcal{O}(n)$ obstructed time intervals, which can be computed in $\mathcal{O}(n)$ time. Their union can be computed in $\mathcal{O}(n \log n)$ by sorting. If this union is equal to $[0, 1]$ then at every time there is a line segment which prevents $q$ and $r$ seeing each other, if not then any uncovered time is a moment at which the segment between $q$ and $r$ is not obstructed by any line segment and hence $q$ and $r$ can see each other.
-
-We argue this is tight by a reduction from the problem of determining if two sets of real numbers of size $n$, $A$ and $B$, are equal, which is known to be $\Omega(n \log n)$ even if $A$ is supplied sorted. \cite{FRANK SAID SO} Given $A$ and $B$ where $A$ is sorted, we scale all points to within $[0, 1]$ and fix $\epsilon$ to be smaller than half the minimum distance between any adjacent points in $A$. From $A$ we construct a set $\mathcal{A}$ of $n+1$ intervals $\mathcal{A} = \{ [0, a_1-\epsilon], [a_1+\epsilon, a_2-\epsilon], \ldots, [a_n+\epsilon, 1] \}$. From $B$ we construct a set $\mathcal{B} = \{ [b_1-\epsilon, b_1+\epsilon], \ldots, [b_b-\epsilon, b_n+\epsilon] \}$. By placing the intervals of $\mathcal{A} \cup \mathcal{B}$ along the $x$-axis from $(0, 0)$ to $(1, 0)$, having $q$ walk from $(0, 1)$ to $(1, 1)$, and having $r$ walk from $(-1, 0)$ to $(-1, 1)$ it is clear that $q$ and $r$ are mutually visible if and only if $A \neq B$.
-\patrick{Seemed simpler, if you object we can do algebraic decision trees or something}
-
-\begin{theorem}
-    Given a set of $n$ obstacle segments and two entities $q$ and $r$ each following a segment trajectory, we can compute if there is a time where $q$ and $r$ are mutually visible in $\mathcal{O}(n \log n)$ time.
-\end{theorem}
-
-\frank{Say something about the lowerbound; plan was to go via
-  (batched) predecessor queries in the comparison model}
-
-\subparagraph{A linear time algorithm for entities moving in a simple polygon.}
-
-\frank{I mostly copy-edited stuff over from the data structures section}
-
-\frank{TODO: Add some figure (move them over from the section later in the ppaer)}
-\frank{TODO: Do we need to say something about special cases?}
-
-\frank{The discussion about special cases was:}
-Recall that $H(q,r)$ is a polygon bound by the shortest paths between the
-endpoints from $q$ and $r$ together with $q$ and $r$ itself. There is a special
-case illustrated in Figure~\ref{fig:edgecase} for $H(q,r)$ which is when $q$
-has one endpoint which is the furthest point on $q$ from all points on $r$ (or
-vice versa). We call this case a \emph{funnel}. If $H(q,r)$ is a funnel, then
-Section~\ref{sec:pointline} shows how to compute visibility. \patrick{Not
-  actually true, this is immediately true when you "move inside the area of the
-  funnel". If you move in the "tail end of the funnel" you need to do slightly
-  more work.}
-\frank{Start of the actual algorithm:}
-
-
-We define the \emph{visibility glass} $L(q,r)$ as the possibly empty collection
-of line segments between $q$ and $r$ that are contained in $P$. Chazelle and
-Guibas~\cite{Chazelle1989} observe that (the supporting lines of) all these
-line segments can be dualized into a convex polygon $\Lambda(q,r)$ of linear
-complexity. The line through the two entities $q$ and $r$ at time $t$ defines a
-point in this dual space. During the movement of $q$ and $r$ this point traces
-out a curve segment $\gamma$.
-
-\begin{lemma}
-  \label{lemma:hyperbola}
-  The curve segment $\gamma$ is a degree-2 curve segment $\gamma$ for
-  $t \in [0,1]$ with five degrees of freedom.
-\end{lemma}
-
-\begin{observation}
-  \label{obs:visibile}
-  There is a time $t$ at which $q$ and $r$ are mutually visible if and only if
-  $\gamma$ intersects $\Lambda(q,r)$.
-\end{observation}
-
-So, to check if $q$ and $r$ are visible we compute $\gamma$ and $\Lambda(q,r)$
-and test if they intersect. Computing $\gamma$ takes constant time. Once we
-have $\Lambda(q,r)$ we can test if $\gamma$ intersects it by (i) testing if one
-of the endpoints of $\gamma$ lies inside $\Lambda(q,r)$, or if $\gamma$
-intersects one of the edges of $\Lambda(q,r)$. Both these steps can be done in
-linear time. So all that remains is to describe how to obtain
-$\Lambda(q,r)$.
-
-The hourglass $H(q, r)$ is the union of all the shortest paths between $q$ and
-$r$. Observe that $L(q,r)$ is a possibly empty subset of $H(q,r)$. More
-specifically,
-
-\frank{Define bitangent}
-
-\begin{observation}
-  \label{lem:obtain_L}
-  For any two segments $q, r \in P$, there exist segments
-  $q' \subset q, r' \subset r$ s.t. $L(q, r) = H(q', r')$. Moreover, $q'$ and
-  $r'$ are bound by the bitangents of $H(q, r)$.
-\end{observation}
-\frank{I find the notation of using $q$ and $r$ for both the entity and the
-  line segment somewhat confusing to be honest.}
-
-We can compute $H(q,r)$ by computing a constant number of shortest paths
-between the endpoints of $q$ and $r$. This can be done in linear
-time~\cite{GuibasHLST87}. Finding the bitangents of $H(q,r)$ also takes linear
-time. It follows that we can then compute $L(q,r)$, and therefore also its dual
-$\Lambda(q,r)$ in linear time. We conclude:
-
-\begin{theorem}
-  \label{thm:algorithm_simple_polygon}
-  Given a simple polygon $P$ with $n$ vertices and two entities $q$ and $r$
-  moving linearly inside $P$, we can test in $O(n)$ time if there is a time at
-  which $q$ can see $r$.
-\end{theorem}
-
-
-
-
-
-\section{A data structure for queries with one moving entity}
-\label{sec:pointline}
-
-In this section we develop data structures that can efficiently answer
-trajectory visibility queries in case one of the entities $q$ is
-stationary, while $r$ travels along a line segment. Our goal is to
-achieve sub-linear query time. We consider three variants of this
-setting: (i) $P$ is a simple polygon and $r$ is contained in $P$, (ii)
-$P$ is a simple polygon but the trajectory of $r$ may intersect edges
-of $P$, and (iii) $P$ is a polygonal domain \frank{(and the trajectory
-  of $r$ may intersect edges of $P$)?}. \ivor{yes}
-
-\begin{figure}[t]
+\begin{figure}[tb]
     \centering
-    \includegraphics[]{../funnel}
-    \caption{Three times a query pair $(q,r)$ in a simple polygon. In the middle case, the paths $\pi_1, \pi_2$ share their first line segment but there still is a point on $r$ which is visible from $q$.}
-    \label{fig:funnel}
+    \includegraphics{../intersectionsearch}
+    \caption{(left) The three cases of an intersection between $\gamma$ and $P_E$. (right) the right-subspace bound by three halfspaces.}
+    \label{fig:intersectionsearch}
 \end{figure}
 
-\subparagraph{Entity $r$ is contained in a simple polygon.} Consider
-the shortest paths $\pi_1, \pi_2$ from $q$ to the end points of
-$r$. Observe that if edges of $\pi_1$ and $\pi_2$ coincide, they
-coincide in a connected chain from $q$~\cite{guibas1989optimal}. Moreover
-(Figure~\ref{fig:funnel}) if more than one line segment of $\pi_1$ and
-$\pi_2$ coincide, then any shortest path from $q$ to a point on $r$
-cannot be a single line segment. If no edges of $\pi_1$ and $\pi_2$
-coincide then there is at least one point on $r$, whose shortest path
-to $q$ is a line segment. If exactly one line segment of $\pi_1$
-coincides with a segment of $\pi_2$, then that segment must be
-connected to $q$ and if there is a line-of-sight between $q$ and $r$,
-it has to follow that line segment. This observation allows us to
-answer a visibility query by considering only the first three vertices
-of $\pi_1$ and $\pi_2$. These vertices can be found in $\O(\log n)$
-time using the two-point shortest path data structure of Guibas and
-Hershberger~\cite{guibas1989optimal}. We conclude:
+Since $P'$ is convex, we can
+test if an endpoint of $\gamma$ lies inside $P'$ in $O(\log n)$ time. To
+detect an intersection of case $(c)$, we store a Dobkin-Kirkpatrick hierarchy~\cite{dobkin1983intersection} of $P'$. This takes $\O(n)$ space
+and requires $\O(n)$ preprocessing time. Given $\gamma$, we detect an intersection of type $(c)$ as follows (Figure~\ref{fig:intersectionsearch} (*)):
+any node $v$ in this decomposition represents a sub-polygon $P''$ of $P'$ and a
+triangle $\Delta_v$ which splits $P''$ in a left and right part. Consider the
+border of the right part $R = (e_1, e_2, \ldots, e_m)$. Note that if $\gamma$
+does not intersect $\Delta_v$, then $\gamma$ can only dip an edge in $R$ if it
+is contained in the union of the half-spaces that lie to the right of the lines
+supporting (1) one edge of $\Delta_v$ and (2) $e_1$ and $e_m$ (refer to the
+blue area in the figure). Given the node $v$ we do three constant
+time checks. First we check if $\gamma$ intersects $\Delta_v$. If not then we
+check for both the left and right sub-polygon if $\gamma$ is contained in the
+specified area. If that is the case for both or neither sub-polygons then
+$\gamma$ can never dip an edge of $P_E$, else we recurse. It follows that we
+can detect case $(c)$ in $\mathcal{O}(\log n)$ time. 
+\begin{lemma}
+  We can preprocess a simple polygon $P'$ consisting of $n$ edges in $\mathcal{O}(n)$ time and using $\mathcal{O}(n)$ space, such that for any degree-2 curve segment $\gamma$ we can detect an intersection of type $(a)$ or $(c)$ in $\mathcal{O}(\log n)$ time.
+\end{lemma}
 
-% gives us an
-% algorithm for the visibility query in this scenario: we simply build
-% the shortest path data structure from Guibas and Hershberger which
-% takes $\Theta(n)$ space, has $\Theta{O}(n)$ construction and
-% $\Theta(\log n)$ query time. Given $q$ and $r$, we use this data
-% structure to obtain $\pi_1$ and $\pi_2$ and we check whether the first
-% and second edge coincides. If only the first edge coincides we trace
-% its supporting line and check if we reach $r$ without intersecting
-% $\pi_1$ or $\pi_2$ using their binary tree representation.
+
+The curve $\Gamma$ of which $\gamma$ is a segment divides the plane into two areas, $\Gamma^- := \{ a_1 x^2 + a_2 x + a_3 xy + a_4 y + a_5 y^2 + a_6 \le 0  \}$ and its complement $\Gamma^+$. An edge $(x_1, x_2) \times (x_3, x_4)$ of $P'$ is intersected by $\gamma$ with an intersection of type $(b)$ only if one endpoint of the edge lies in $\Gamma^-$ and the other in $\Gamma^+$. If $\Gamma$ is a curve with $k+1 \le 6$ degrees of freedom then the formulation of $\Gamma^-$ and $\Gamma^+$ is a predicate that specifies whenever a point $\vec{x} = (x_1, x_2)$ lies in $\Gamma^-$ or $\Gamma^+$ with $k$ terms depending on variables from $\vec{x}$. This transforms the question of whether an edge has two points on either side of $\Gamma$ into two consecutive halfspace range queries in $\mathbb{R}^k$. 
+We build a three-level data structure where the first two levels are
+5-dimensional partition trees. On top of each node in the second level
+we build a binary tree on the clockwise ordering (with respect to $P'$) of the edges in that node. 
+
+During query time, we transform the degree-2 curve $\Gamma$ into two
+$k$-dimensional halfspaces $g(\Gamma^+)$ and $g(\Gamma^-)$. With two
+consecutive halfspace range queries we obtain the edges which have an
+endpoint on either side of $\Gamma$ in $\mathcal{O}(n^ {1 -
+  \frac{1}{k}})$ time. The result consists of $\mathcal{O}(n^ {1 -
+  \frac{1}{k}})$ nodes in the secondary trees. For each such node we query
+the associated binary search tree $T_i$: the subset of these edges
+which are intersected by the segment $\gamma$ must be a consecutive subset of the leaves of $T_i$. 
+Thus using $T_i$ we can obtain these consecutive leaves in $\mathcal{O}(\log n)$ time by checking testing if $\gamma$ lies before or after the point of intersection between $\Gamma$ and an edge in $T_i$.
+The time and space needed for detecting case $(b)$ dominates the time and space needed for case $(a)$ and $(c)$ and we conclude:
 
 \begin{theorem}
+  \label{thm:intersect_convex_polygon}
+  Let $P'$ be a convex polygon with $n$ vertices. In $\O(n\log^2 n)$ time we can
+  build a data structure of size $\O(n\log^2 n)$ with which we can test if an
+  arbitrary degree-2 query curve segment $\gamma$ with $k+1 \le 6$ degrees of freedom
+  intersects $P'$ in $\O(n^{1 - \frac{1}{k-1}}\log n)$ time.
+\end{theorem}
+
+
+
+
+\section{A data structure for two entities moving inside a simple polygon}
+\label{sec:lineline}
+
+% \subsection{Curve-segment intersection queries with a convex polygon}
+% \label{sub:A_data_structure_for_testing_intersections_between_a_curve_segment_with_a_convex_polygon}
+
+In this section we build a data structure to answer trajectory visibility
+queries in case both the entities $q$ and $r$ move linearly, possibly at
+different speeds, inside a simple polygon $P$. Our main approach is the same as
+in our algorithm from Theorem~\ref{thm:algorithm_simple_polygon}: we obtain the
+convex polygon $\Lambda(q,r)$ that is the dual of the visibility glass
+$L(q,r)$, and test if the curve segment $\gamma$ tracing the line through $q$
+and $r$ in the dual space intersects $\Lambda(q,r)$. By
+Observation~\ref{obs:visible} this allows us to correctly answer trajectory
+visibility queries. The main challenge is that we cannot afford to construct
+$\Lambda(q,r)$ explicitly. Instead, our data structure will allow us to obtain
+a compact representation of $\Lambda(q,r)$ that we can query for intersections
+with $\gamma$.
+
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics{../guibas}
+    \caption{A triangulated polygon $P$ where the diagonals are labelled from $d_1$ to $d_{14}$. (left) a balanced hierarchical subdivision on the diagonals. In each node, G\&H store an hourglass between diagonals. (right) There are $13$ diagonals between $q$ and $r$. However, we have pre-stored hourglasses $H(d_1,d_3)$, $H(d_3, d_7)$, $H(d_7, d_{11})$ and $H(d_{11}, d_{13})$. During query time, we only have to concatenate these $\mathcal{O}(\log n)$ hourglasses to get $H(d_1, d_{13})$. }
+    \label{fig:guibas}
+\end{figure}
+
+To obtain $\Lambda(q,r)$ we use a variation of two-point shortest-path query
+data structure of Guibas and Hershberger~\cite{guibas1989optimal}. Their data
+structure (Figure~\ref{fig:guibas}) compactly stores a collection of hourglasses that can be concatenated
+to obtain a shortest path between two arbitrary points $p,p' \in P$. All
+shortest paths, so in particular the boundary of the hourglasses, are
+represented using balanced binary search trees storing the vertices on the
+path. Guibas and Hersberger show that by reusing shared subtrees these $O(n)$
+hourglasses can be stored using only $O(n)$ space. To report the shortest path
+between two query points their data structure concatenates $O(\log n)$ of these
+hourglasses. The result is again represented by a balanced binary tree.
+
+Unlike the Guibas and Hershberger structure, we store the hourglasses
+explicitly. In particular, the vertices on the boundary of an hourglass are
+stored in the leaves of a balanced binary search tree. The internal nodes of
+these trees correspond to semi-convex subchains. Let $T$ denote the collection
+of all these nodes. Each node $v \in T$ stores its subchain $C_v$ in an
+associated data structure. Specifically, we dualize the supporting-lines of the
+edges in $C_v$ to points. Two consecutive edges produce two points in the dual, which we
+again connect into semi-convex polygonal chains. 
+So for every vertex in the sub-chain $C_v$ the associated data
+structure $\Delta_v$ actually stores a line-segment; together these segments
+again form a polygonal chain $\Psi_v$. The associated data structure will
+support intersection queries with a hyperbolic query segment $\gamma$;
+i.e.~it will allow us to report the segments of $\Psi_v$ intersected by
+$\gamma$. We implement $\Delta_v$ using the data structure from
+Theorem~\ref{thm:intersect_convex_polygon}. Refer to Figure~\ref{fig:panel} for an overview of this approach.
+
+\begin{lemma}
+  \label{lem:space_dual_chains}
+  The total size of all chains $\Psi_v$ over all nodes $v$ is $O(n\log^3 n)$.
+\end{lemma}
+
+\begin{proof}
+  The Guibas and Hershberger data structure is essentially a balanced
+  hierarchical subdivision that recursively partitions the polygon into two
+  roughly equal size subpolygons. Every subpolygon has $O(\log n)$
+  diagonals~\cite{guibas1989optimal}, and thus stores at most $O(\log^2 n)$
+  hourglasses\footnote{We use the version of Guibas and Hersberger's structure
+    that achieves only $O(\log^2 n)$ query time.}. It follows that all
+  hourglasses of a subpolygon of size $m$ have use at most $O(m\log^2 n)$
+  space. The height of the balanced hierarchical subdivision is $O(\log n)$,
+  and at every level the total size of the subpolygons is $O(n)$. Therefore,
+  the total size of all subpolygons is $O(n\log n)$. The lemma follows.
+\end{proof}
+
+For a chain of size $m=|\Psi_v|$ the data structure $\Delta_v$ has size
+$O(m\log^2 m)$ and can be built in $O(m\log^2 m)$ time. It follows that our
+data structure uses $O(n\log^5 n)$ space in total, and can be built in
+$O(n\log^5 n)$ time.
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics[]{../panel}
+    \caption{(1) The base level of our data structure is a hierarchical
+      triangulation. (2) Given $q$ and $r$, we compute $\Lambda(q,r)$ and the
+      degree-2 curve segment $\gamma$. (3) We store the parameters of each edge
+      of $\Lambda(q,r)$ (4) Each parameter vector gets mapped to a point in
+      $\mathbb{R}^4$ and the query curve segment gets mapped to a 4-dimensional
+      halfspace which is empty only if $\gamma$ intersects no edge from
+      $\Lambda(q,r)$.}
+    \label{fig:panel}
+\end{figure}
+
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics[]{../chain}
+    \caption{(left) An hourglass between $q$ and $r$ in orange. The
+      lower chain consists of five chains which coincide $P$ that are
+      joined by outer tangents in dotted lines labelled $\tau_1 \ldots
+      \tau_5$. (middle) An example of an area bound by the dualized
+      chain $C_4$. (right) A simplified version of
+      $\Lambda(q,r)$. Note that outer tangents could become vertices
+      of $\Lambda(q,r)$. \frank{Fig left does not look like an
+        hourglass to me; the chains are not semi-convex}}
+    \label{fig:chain}
+\end{figure}
+
+
+\subparagraph{Querying the data structure.} When get a trajectory visibility
+query with entities $q$ and $r$ we have to test if the curve $\gamma$ traced by
+the point dual to the line through $q$ and $r$ intersects $\Lambda(q,r)$.
+% (Observation~\ref{obs:visible})
+By Observation~\ref{obs:obtain_L} the primal
+representation $L(q,r)$ of $\Lambda(q,r)$ is an hourglass $H(q',r')$. We now
+argue that: (i) we can find the subsegments $q'$ and $r'$ in $O(\log n)$ time,
+(ii) that our data structure can report $O(\log^2 n)$ nodes from $T$ that
+together represent an hourglass $H(q',r')$, and (iii) that we can then test if
+$\gamma$ intersects $\Lambda(q,r)$ by using the associated data structures of
+these reported nodes. This will result in $O(n^{\frac{3}{4}}\log^3 n)$ query
+time.
+
+\begin{lemma}
+  \label{lemma:visibilityquery}
+  Given our data structure, we can compute the subsegments $q' \subseteq q$ and $r' \subseteq r$ such that $L(q,r) = H(q',r')$ in $\O(\log n)$ time.
+\end{lemma}
+
+\begin{proof}
+    By Observation~\ref{obs:obtain_L} the visibility glass $L(q,r)=H(q',r')$ for two sub-segments $q'$ and $r'$ which are bound by two edges which when extended form a bitangent of $H(q,r)$. We explained in the proof of Observation~\ref{obs:obtain_L} that the hourglass $H(q,r)$ had an upper and lower convex chain which may or may not share a vertex. The upper an can obtain the upper and lower chain both are a shortest path between endpoints of $q$ and $r$. We can obtain them using the data structure $\D$ from \cite{guibas1989optimal} as a balanced binary search tree and we can verify if they share a vertex using this tree. If that is the case then $L(q,r)$ is either empty or a single segment and we can verify this using an additional $\mathcal{O}(\log n)$ time. 
+    
+    If the upper and lower chain do not share a vertex then the segments $q'$ and $r'$ are bound by two bitangents. 
+    Such a bitangent is the extension of an edge $(u,v)$ on the shortest path between two endpoints of $q$ and $r$. The edge $(u,v)$ is the unique edge on this path for which the path makes a clockwise turn at $u$ and a counterclockwise turn at $v$ or vice versa. Using $\D$ we can obtain any path as a balanced binary search tree. We perform a binary search on this tree to identify the edge $(u,v)$ whose endpoints have this unique clockwise ordering.
+\end{proof}
+
+We use Lemma~\ref{lemma:visibilityquery} to find the endpoints $q_1,q_2$ of
+$q'$ and $r_1$, $r_2$ of $q'$ and $r'$, respectively. We can obtain the
+shortest paths $\geod(r_1,q_1)$ and $\geod(r_2,q_2)$ bounding $L(q,r)=H(q',r')$
+by concatenating $O(\log n)$ of the pre-stored hourglasses. To concatenate two
+hourglasses we actually select two contiguous subchains in both hourglasses,
+and compute two bridge edges connecting them. Such a contiguous subchain can be
+represented by $O(\log n)$ nodes in the binary search trees representing the
+hourglass boundary. It follows that $\geod(r_1,q_1)$ can be represented by
+$O(\log^2 n)$ nodes; each representing a pre-stored subchain in the data
+structure, together with $O(\log^2 n)$ line-segments (the bridge segments). We
+now observe that the chains stored in the associated data structures of these
+nodes, again together $O(\log^2 n)$ separate line segments $\Xi$, actually
+represent the dual $\Lambda(q,r)$ of $L(q,r)$.
+
+To check if the hyperbolic query segment $\gamma$ intersects $\Lambda(q,r)$ we
+check if one of the endpoints of $Q$ lies in $\Lambda(q,r)$; in this case one
+of the paths $\geod(r_1,q_1)$ or $\geod(r_2,q_2)$ is actually a single segment,
+or if $\gamma$ intersects the boundary of $\Lambda(q,r)$. To this end, we query
+each of these associated data structures. Since $\gamma$ has $k+1 = 5$ degrees of
+freedom (Lemma~\ref{lemma:hyperbola}) this takes $O(n^{\frac{3}{4}}\log^3 n)$ time. We
+test for intersection with the segments in $\Xi$ separately. We thus obtain the
+following result.
+
+\begin{theorem}
+  \label{thm:data_structure_two_moving_monkeys_simple_polygon}
+  Let $P$ be a simple polygon with $n$ vertices. In $O(n\log^5 n)$ time we can
+  build a data structure of size $O(n\log^5 n)$ that can answer trajectory
+  visibility queries in $O(n^{\frac{3}{4}}\log^3 n)$ time.
+\end{theorem}
+
+\section{Polygonal domains and trajectories intersecting edges}
+\label{sec:variants}
+
+We now consider the case where the trajectories can intersect a polygonal domain $P$. We include the special case where one trajectory is a stationary point.
+
+\subsection{Two moving entities crossing edges in a polygonal domain}
+\label{sub:Polygonal_Domain}
+
+We investigate the two cases where (1) the entities can walk through
+edges of $P$, and (2) where $P$ is a polygonal domain, simultaneously. Let $k$
+be an unspecified constant. We prove that it is possible to transform the visibility query into a halfspace range query in $\mathbb{R}^k$ among $\mathcal{O}(n^3)$ points. Using cutting trees~\cite{chazelle1993cutting} we can preprocess the $\mathcal{O}(n^3)$ $k$-dimensional points representing $P$ using $\mathcal{O}(n^{3k})$ space and $\mathcal{O}(n^{3k})$ preprocessing time such that halfpace range queries (and thus our visibility query) can be answered in $\mathcal{O}(\log^k n)$ time.
+%Our approach almost certainly does not generate an optimal solution with respect to its space requirement and query time. \frank{rephrase prev sentence} 
+%However, it is a non-trivial proof that sub-linear query times are achievable. 
+Details can be found in Appendix~\ref{app:Two_moving_entities_in_a_polygonal_domain}. 
+
+Given a polygonal domain $P$ of $n$ vertices, we construct two near-identical data structures that test if there is line-of-sight between $q$ and $r$ with either positive or negative slope respectively. Let $t$ be a time where $q$ and $r$ are mutually visible and the line $g(t)$ through $q$ and $r$ has positive slope. The segment between $q$ and $r$ must be contained in a visibility glass $L(e_1, e_2)$ for two edges $e_1, e_2 \in P$. Consider the two points $p_1$ and $p_2$ which are the points of intersection between $g(t)$ and the edges $e_1$ and $e_2$. If $p_1$ lies below $p_2$, and $q$ lies below $r$, \patrick{I would phrase this as inequalities in $y$ instead of saying "below"} then, because $g(t)$ has a positive slope, we must have that $x_{p_1} \le x_{q} \le x_{r} \le x_{p_2}$.
+
+
+This observation inspires the following approach: we consider for each pair of edges $e_1, e_2 \in P$, their dualized visibility glass $\Lambda(e_1,e_2)$, which we then triangulate. This results in a set $\mathcal{T}$ of $\mathcal{O}(n^3)$ triangles in the dual. Let $T \in \mathcal{T}$ be a triangle of $\Lambda(e_1, e_2)$, we lift $T$ to a two-dimensional surface in $\mathbb{R}^4$ (refer to Figure~\ref{fig:threedimensional} with the map $(a,b) \in T \rightarrow (a, b, x_{p_1}, x_{p_2})$ where $x_{p_1}$ is the $x$-coordinate of the intersection of the line $y = ax-b$ with the edge $e_1$. The two entities $q$ and $r$ have a unique associated degree-2 curve segment $\gamma$ which we also lift to $\mathbb{R}^4$ with the map $(a,b) \in \gamma \rightarrow (a,b, x_{q}, x_{r})$ where $x_q$ is the $x$-coordinate of entity $q$ at the time that realises the point $(a,b)$ on $\gamma$. It follows from this map and the observation above, that there is a time where $q$ and $r$ are mutually visible if and only if their $4$-dimensional curve intersects a 4-dimensional volume bound by a triangle $T \in \mathcal{T}$ and two orthogonal directions.
+
+We transform $P$ into $\mathcal{O}(n^3)$ volumes in $\mathbb{R}^4$ which each have a constant-length description. Any query pair $q$ and $r$ gets mapped to a four-dimensional curve segment $\gamma'$ with constant description length. It follows that the predicate function specifying whether the segment $\gamma'$ intersects one of these volumes has constant description length and hence has a linearization into $k$ terms for some large constant $k$. There is a time where $q$ and $r$ are mutually visible if and only if there is an intersection.
+We conclude:
+
+\begin{theorem}
+ \label{thm:polygonal_moving}
+  Let $P$ be a polygonal domain with $n$ vertices, and let $k$ be some sufficiently large constant. In $O(n^{3k})$ time we
+  can build a data structure of size $O(n^{3k})$ that can answer
+  trajectory visibility queries in $\mathcal{O}(\log^k n)$ time.
+\end{theorem}
+
+ 
+ 
+ \subsection{A data structure for queries with one moving entity}
+ \label{sec:pointline}
+ 
+ Finally, we consider the special case where $q$ is a point and $r$ is a segment.
+ Clearly, our results for the more general scenario apply to this case as well. However, we can achieve better results using a different approach. Next, we briefly describe the main ideas. A more thorough description can be found in Appendix~\ref{app:pointline}.
+ 
+ When $P$ is a simple polygon and $r$ is contained in $P$ we build the shortest path data structure from Guibas and Hershberger~\cite{guibas1989optimal} on the simple polygon $P$. At query time, we use this data structure to obtain the two shortest paths between the endpoints of $r$ and the entity $q$. We show that we can inspect these paths in constant time each, to detect if there is a time where $q$ and $r$ are mutually visible.
+ 
+\begin{theorem}
+\label{thm:one_dead_one_alive}
   Let $P$ be a simple polygon with $n$ vertices. In $\O(n)$ time we
   can build a data structure of size $\O(n)$ with which we can test if
   there is a time at which a stationary entity can see a linearly
@@ -466,139 +687,27 @@ Hershberger~\cite{guibas1989optimal}. We conclude:
   % trajectory $r$ which is contained in $P$, we can determine if there
   % is a point on $r$ that is visible from $q$ in $\Theta(\log n)$ time.
 \end{theorem}
-
-
-% \frank{integrate the thing below:}
-% \subparagraph{Visibility polygon retrieval.}
-% For any point $q$ in a polygonal domain $P$, its \emph{visibility
-%   polygon} $V_q$ is the union of all points visible from $q$. 
-
-
-% A fixed edge coincides with an edge of $P$. An variate edge of $V_q$ is stored as a tuple $(e, v_e)$ where $e$ is an edge and $v_e$ is a vertex of $P$. One endpoint of $e$ is the intersection between the line $qv_e$ and $e$. For all $q \in P$, the \emph{implicit} visibility polygon is a clockwise order of the fixed and variate edges of $V_q$, stored in a red-black tree. Aronov \etal \cite{aronov2002visibility} show how to partition a simple polygon $P$ into $\mathcal{O}(n^2)$ cells such that for each cell, all points in that cell have the same implicit visibility polygon. This allows them to prepreprocess $P$ in $\mathcal{O}(n^2\log n)$ time using $\mathcal{O}(n^2)$ space, such that for any query point $q$, we can get a pointer to the implicit $V_q$ in $\mathcal{O}(\log n)$ time. 
-%
-
-\subparagraph{Entity $r$ can cross a simple polygon.}
-If $r$ is able to move through edges of $P$ then its trajectory may
-intersect the boundary of $P$ linearly often. Inspecting each of the
-resulting subsegments explicitly would thus require at least
-$\Omega(n)$ time. Hence, we use a different approach.
-
+ 
+ When $P$ is a simple polygon but the trajectory of $r$ may intersect edges
+of $P$ is significantly more difficult. 
 Let $V_q$ denote the \emph{visibility polygon} of point $q$: the set
 of all points visible from $q$. There is a time at which $q$ can see
 $r$ if and only if the trajectory of $r$ intersects (the boundary of)
 $V_q$. We build a data structure to find such a point (if one
-exists).
-
-Aronov~\etal~\cite{aronov2002visibility} actually developed an $\O(n^2)$ size
+exists). To this end we extend a result of 
+Aronov~\etal~\cite{aronov2002visibility}. They developed an $\O(n^2)$ size
 data structure that can be built in $\O(n^2\log n)$ time and can report the
 visibility polygon of an arbitrary query point $q \in P$ in $\O(\log^2 n)$
 time. The visibility polygon $V_q$ is returned in its combinatorial
 representation, that is, as a (pointer to a) balanced binary search tree,
-storing the vertices of $V_q$ in order along the boundary. It is important to
-note that this combinatorial representation does not explicitly store the
+storing the vertices of $V_q$ in order along the boundary. This combinatorial representation does not explicitly store the
 locations of all vertices of $V_q$. Instead, a vertex $v$ of $V_q$ may be
-represented by a pair $(e,w)$, indicating that $v$ is the intersection point of
-polygon edge $e$ and the line through vertex $w \in P$ and the query point
+represented by a pair $(e,w)$, indicating that $v$ is the intersection point of polygon edge $e$ and the line through vertex $w \in P$ and the query point
 $q$. Computing the explicit location of all vertices of $V_q$ thus takes
-$\O(|V_q\|)$ time, if so desired, by traversing the tree. We now extend the
-results of Aronov~\etal in such a way that we can efficiently test if a line
-segment intersects $V_q$ \emph{without} spending the $\O(\|V_q\|)$ time to
-compute the explicit locations.
+$\O(|V_q|)$ time by traversing the tree.
 
-We briefly review the results of Aronov~\etal first. They build a
-balanced hierarchical decomposition of
-$P$~\cite{balanced_hierarchical_subdiv}. Each node $v$ in the balanced
-hierarchical decomposition represents a subpolygon $P_v$ of $P$ (the
-root corresponds to $P$ itself) and a diagonal of $P_v$ that splits
-$P_v$ into two roughly equal size subpolygons $P_\ell$ and $P_r$. For
-subpolygon $P_\ell$ the data structure stores a planar subdivision
-$\S_\ell$ (of the area outside $P_\ell$) such that for all points in a
-cell of $\S_\ell$ the part of the visibility polygon inside $P_\ell$
-has the same combinatorial representation. See Figure~\ref{fig:aronov}
-for an illustration. Moreover, for each cell it stores the
-corresponding combinatorial representation. These representations can
-be stored compactly by traversing $\S_\ell$ while maintaining the
-(representation of the) visibility polygon in $P_\ell$ in a partially
-persistent red black tree~\cite{...}. The data structure stores an
-analogous subdivision for $P_r$. The complete visibility polygon of
-$q$ can be obtained by concatenating $\O(\log n)$ subchains of these
-pre-stored combinatorial representations (one from every level of the
-hierarchical decomposition).
-
-We use the same approach as Aronov~\etal~\cite{aronov2002visibility},
-but we use a different representation of $V_q$. Our representation
-will be a weight balanced binary search tree
-($BB[\alpha]$-tree~\cite{nievergelt1973bbalphatree}) whose leaves
-store the vertices of $V_q$ in order along the boundary. An internal
-node of this tree corresponds to a subchain of vertices along $V_q$,
-which is stored in an associated data structure. We distinguish two
-types of vertices in such a chain: \emph{fixed vertices}, for which we
-know the exact location, and \emph{variate} vertices, which are
-represented by an polygon-edge, polygon-vertex pair $(e,w)$. We store
-the fixed vertices in a linear size dynamic data structure that
-supports halfspace-emptyness queries, that is, a dynamic convex hull
-data structure~\cite{dynamicCH}. This data structure uses $\O(m)$
-space, and supports $\O(\log m)$ time updates and queries, where $m$
-is the number of stored points. The variate vertices are mapped to a
-point in $\R^8$ using a function $f$ that is independent of $q$. We
-give the precise definition later. We store the resulting points in a
-dynamic data structure that can answer halfspace emptyness
-queries~\cite{agarwal1995dynamichalfspace}. This data structure uses
-$\O(m\log m)$ space, answers queries in $\O(m^{\frac{3}{4}+\eps})$ time and
-supports updates in $\O(\log^2 m)$ time, where $m$ is the number of
-points stored. It follows that our representation of $V_q$ uses
-$\O(n\log^2 n)$ space, and supports updates in amortized
-$\O(\log^3 n)$ time.
-\frank{maybe say a bit here about cost of
-  rebalancing the primary trees:}
-% Since (re)building an associated data
-% structure of size $m$ takes $O(m\log^2 m)$ time, the total cost for
-% rebuilding the associated data structures during rotations in the
-% primary tree is $O(n\log^3 n)$~\cite{mehlhorn1984data}.
-Since all nodes in the data structure have constant in-degree we can
-make it partially persistent at the cost of $\O(\log^3 n)$ space per
-update~\cite{driscoll1989persistent}. It follows we can represent the
-visibility polygons for all cells in $\S_\ell$ in $O(n^2\log^3 n)$
-space.
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[]{../twolevel}
-    \caption{ (left) A simple polygon split in $\mathcal{O}(n^2)$
-      cells. For each cell, there exists a red-black tree that
-      represents a visibility polygon. (middle) Given $V_q$ and $r$,
-      $r$ could intersect the explicit $V_q$ depending on the location
-      of $q$. We shoot two rays from $q$ to $r$ and find their
-      intersection with $V_q$ in the red-black tree. That gives us
-      three leaves highlighted in orange. (right top) All the fixed
-      edges in this node are stored in a ray-shooting data structure,
-      (right bottom) all the variate edges have 8-dimensional points
-      that are stored in an $8$-dimensional partition
-      tree. \frank{Update fig left as it is inaccurate}}
-    \label{fig:twolevel}
-\end{figure}
-
-\subparagraph{Querying.} Given a query $q,r$ we test if the segment $r$
-intersects $V_q$. The main idea is to query our data structure for the part of
-$V_q$ in the wedge defined by $q$ and $r$. We then extend $r$ into a line $\rho$, and
-test if this line separates a vertex of $V_q$ in this wedge from $q$. The
-segment $r$ intersects $V_q$, and thus there is a time at which $r$ is visible
-from $q$, if and only if this is the case.
-
-We can obtain the part of $V_q$ that lies in the wedge defined by $q$ and $r$,
-represented by $O(\log^2 n)$ $BB[\alpha]$-tree nodes. For each of these nodes
-we query the associated data structures to test if the halfspace $\rho^{\neg q}$ not
-containing $q$ is empty. We can directly query the data structure storing the
-fixed vertices with $\rho^{\neg q}$. To test if there is a variate vertex that lies in
-$\rho^{\neg q}$ we map it to a halfspace in $\R^8$ using a function $g$.
-
-\begin{lemma}
-  \label{lem:query_static}
-  There are functions $f$ and $g$ such that $f$ maps each variate vertex
-  $(e,w)$ to a point $f(e,w) \in \R^8$ and $g$ maps each $\rho^{\neg q}$ to a
-  halfspace $g(\rho^{\neg q})$ in $\R^8$ such that $f(e,w) \in g(\rho^{\neg q})$ if and only
-  if the location of the variate vertex $(e,w)$ in $V_q$ lies in $\rho^{\neg q}$.
-\end{lemma}
+We extend the above results using semi-algebraic range searching so that we can efficiently test if a line segment intersects $V_q$ \emph{without} spending the $\O(|V_q|)$ time to compute the explicit locations.
+Suppose that the entity $r$ cuts off a vertex $v$ of $V_q$ represented by a pair $(e,w)$ then the vertex $v$ and the entity $q$ must lie on either side of the line through $r$. This observation leads to a predicate function $F( (e,w), (q,r))$ that outputs a negative real number if and only if the entity $q$ and the vertex $v$ lie on either side of $r$. We make several non-trivial observations about $V_q$ and the Aronov \etal data structure that allows us to express this predicate function with as few variables as possible. The result is that we can transform the question of whether $r$ intersects $|V_q|$ into a halfspace emptyness query in $\mathbb{R}^8$. We therefore obtain the following result.
 
 \begin{theorem}
   \label{thm:one_dead_one_ghost}
@@ -607,230 +716,29 @@ $\rho^{\neg q}$ we map it to a halfspace in $\R^8$ using a function $g$.
   trajectory visibility queries between a static entity $q$ and a linearly
   moving entity $r$ that may cross $P$ in $O(n^{\frac{3}{4}+\eps})$ time.
 \end{theorem}
-\frank{This theorem now direclty follows. Maybe we want to say one thing about
-  the query time though.}
 
+When $P$ is a polygonal domain and $r$ may intersect edges of $P$ we essentially use the same ideas as in the previous case. In this case, the base data structure to obtain the visibility polygon $V_q$ uses $O(n^4)$ rather than $O(n^2)$ space.
 
-% \subparagraph{Persistence.}
-% The aforementioned data structures create a hierarchical decomposition of $P$ and store in each node of this tree an implicit representation of a sub-polygon of $P$ (be it an hourglass or a visibility polygon) as a red-black tree. A persistent data structure (introduced by Sarnak and Tarjan \cite{sarnak1986planar}) is a data structure that accepts an arbitrarily long sequence of updates, but is able to remember at any time all its earlier versions. Both data structures make use of persistence to save storage space \cite{hershberger1991new, aronov2002visibility}: instead of storing a unique tree at every node of the decomposition they store one partially persistent red-black tree  which for each adjacent node in the decomposition, remembers an update that transforms the red-black tree into the node for that tree.
-% %
-
-
-\subparagraph{Polygonal domains.} In case $P$ is a polygonal domain we use a
-similar approach; we build a subdivision \S in which all points in a cell have
-a visibility polygon $V_q$ with the same combinatorial structure, and then
-traverse \S while maintaining $V_q$ in a partially persistent data
-structure. To obtain \S we simply we simply take all $O(n^2)$ lines defined by
-pairs of polygon vertices. The subdivision \S is the arrangement of these lines
-and has $O(n^4)$ complexity. We obtain a traversal of \S by computing an Euler
-tour of a spanning tree of the dual of \S. We conclude
-
-\begin{theorem}
-  \label{thm:one_dead_one_ghost}
+\begin{theorem} 
+\label{thm:full_domain}
   Let $P$ be a polygonal domain with $n$ vertices. In $O(n^4\log^3 n)$ time We
   can build a data structure of size $O(n^4\log^3 n)$ that can answer
   trajectory visibility queries between a static entity $q$ and a linearly
-  moving entity $r$ that may cross $P$ in $O(n^{\frac{3}{4}+\eps})$ time.
+  moving entity $r$ that may cross $P$ in $O(n^{\frac{3}{4}+\eps})$ time.    
 \end{theorem}
-
-\section{A data structure for queries with two moving entities}
-\label{sec:lineline}
-
-% \subsection{Curve-segment intersection queries with a convex polygon}
-% \label{sub:A_data_structure_for_testing_intersections_between_a_curve_segment_with_a_convex_polygon}
-
-
-In this setting we have two entities $q$ and $r$ in a polygonal domain $P$ which both traverse a line segment, possibly at different (constant) speeds, during the time interval $t \in [0,1]$. We investigate three variants of this setting: one where $P$ is a simple polygon and $q$ and $r$ are contained in $P$, one where $P$ is a simple polygon and one where $P$ is a polygonal domain. For algebraic convenience we say that $q$ walks from the point $(a_1, a_2)$ to $(a_1 + a_3, a_2 + a_4)$ and $r$ walks from the point $(a_5, a_6)$ to $(a_5 + a_7, a_6 + a_8)$. 
-\begin{figure}[t]
-    \centering
-    \includegraphics[]{../edgecase}
-    \caption{(left + middle) Two placements of $q$ and $r$ that realise a funnel. (right) $L(q,r)$ is clearly non-empty but there is never a time where $q$ and $r$ are mutually visible. }
-    \label{fig:edgecase}
-\end{figure}
-
-\frank{Sketch the approach here or so}
-
-\subsection{Intersecting a curve segment and a convex polygon}
-\label{subsec:intersectionsearch}
-\patrick{this is an abrupt jump}
-
-Let $P_E$ be a convex polygon, and let $E$ denote its $n$ edges. We
-describe how to store $P_E$ using $O(n)$ space so that we can test in
-$O(n^{\frac{4}{5}}\log n)$ time if an arbitrary curve segment $\gamma$
-described by a degree-2 polynomial intersects
-$P_E$. % We can easily test if one of the endpoints of $\gamma$ lies
-% inside $P_E$ in $O(\log n)$ time. If not, $\gamma$ intersects $P_E$ if and only
-% if it intersects an edge of $P_E$. We now describe how we can efficiently test
-% for intersections between $\gamma$ and $E$.
-
-Let $s$ and $z$ be the endpoints of $\gamma$, let $\Gamma$ denote the
-\frank{unique?} degree 2 curve $\Gamma \supset \gamma$ given by
-$a_1 x^2 + a_2 x + a_3 xy + a_4 y + a_5 y^2 + a_6 = 0$, and let
-$\vec{a} = (a_1, \ldots, a_6)$. % Note that for any representation of $\gamma$,
-% we can compute $\vec{a}$ in constant time.
-
-% Instead of immediately using linearization, we resort to a strategy that we use throughout this paper: we distinguish several cases of our query based on geometric properties and we solve most of them using conventional data structures. That leaves us with a more restricted version of the problem and we use semi-algebraic range searching on this version to obtain a linearization with low dimension $k$. 
-
-We observe (Figure~\ref{fig:intersectionsearch}) that if $\gamma$ intersects
-$P_E$, then (a) an endpoint of $\gamma$ lies within $P_E$, or (b) $\gamma$ cuts
-off a vertex, or (c) $\gamma$ intersects only one edge of $E$ twice and has no
-endpoint in $P_E$ (we call this \emph{dipping}). Intersections of type $(a)$
-and $(c)$ can be identified with a regular binary search on on $P_E$. An
-intersection of type $(b)$ is detected using semi-algebraic range searching.
-%
-\begin{figure}[tb]
-    \centering
-    \includegraphics{../intersectionsearch}
-    \caption{(left) The three cases of an intersection between $\gamma$ and $P_E$. (right) the right-subspace bound by three halfspaces.}
-    \label{fig:intersectionsearch}
-\end{figure}
-%
-\subparagraph{Intersection types (a) and (c).} Since $P_E$ is convex, we can
-test if an (end)point of $\gamma$ lies inside $P_E$ in $O(\log n)$ time. To
-detect an intersection of case $(c)$, we store a balanced hierarchical
-triangulation of $P_E$~\cite{dobkin1983intersection} \frank{I think this is
-  actually called a dobkin-kirkpatrick hierarchy}. This takes $\O(n)$ space
-and requires $\O(n)$ preprocessing time. Given $\gamma$, we recursively answer
-the intersection query as follows (Figure~\ref{fig:intersectionsearch} (*)):
-any node $v$ in this decomposition represents a sub-polygon $P'$ of $P_E$ and a
-triangle $\Delta_v$ which splits $P'$ in a left and right part. Consider the
-border of the right part $R = (e_1, e_2, \ldots, e_m)$. Note that if $\gamma$
-does not intersect $\Delta_v$, then $\gamma$ can only dip an edge in $R$ if it
-is contained in the union of the half-spaces that lie to the right of the lines
-supporting (1) one edge of $\Delta_v$ and (2) $e_1$ and $e_m$ (refer to the
-blue area in the figure). Given the node $v$ we do three things in constant
-time each: first we check if $\gamma$ intersects $\Delta_v$. If not then we
-check for both the left and right sub-polygon if $\gamma$ is contained in the
-specified area. If that is the case for both or neither sub-polygons then
-$\gamma$ can never dip an edge of $P_E$, else we recurse. It follows that we
-can detect case $(c)$ in $\mathcal{O}(\log n)$ time.
-
-\subparagraph{Intersection type (b)}
-
-\frank{I find the definition of ``Interior of $\Gamma$ to be confusing.}
-We say that the curve $\Gamma$ of which $\gamma$ is a segment divides the plane into the interior and exterior. An edge $(x_1, x_2) \times (x_3, x_4) \in E$ is intersected by $\gamma$ with an intersection of type $(b)$ only if one endpoint lies in the interior and the other in the exterior. The points $(x,y)$ on the interior of $\Gamma$ are the $(x, y)$ for which $a_1 x^2 + a_2 x + a_3 xy + a_4 y + a_5 y^2 + a_6 \le 0$. This formulation gives a straightforward linearization and transforms the question if a point $\vec{x} = (x_1, x_2)$ lies on the interior of $\Gamma$ into a halfspace range query in $\mathbb{R}^5$. 
-We build a three-level data structure where the first two levels are 5-dimensional partition trees and on top of each node in the second level we build a binary search tree on the clockwise ordering of the edges in that node. \patrick{This is a pretty quick gloss, you need to have seen this before to know what we're doing here}
-\frank{Agreed; this needs one or two lines of extra explanation}
-
-During query time, we transform the degree-2 curve $\Gamma$ into a $5$-dimensional halfspace and obtain the edges which cross $\Gamma$ in $\mathcal{O}(n^ {\frac{4}{5}})$ time represented as at most $\mathcal{O}(n^ {\frac{4}{5}})$ binary search trees $T_1 \ldots T_m$. Consider the clockwise ordering of the edges in such a tree $T_i$: the subset of these edges which are intersected by the segment $\gamma$ must be a connected chain in this order. Thus (using our binary search trees on top of each node) we can obtain these consecutive chains in $\mathcal{O}(\log n)$ time for each $T_i$. The time and space needed for solving case $(b)$ dominates the time and space needed for case $(a)$ and $(c)$ and we conclude:
-
-\begin{theorem}
-  \label{thm:intersect_convex_polygon}
-  Let $P_E$ be a convex polygon with $n$ vertices. In $\O(n\log n)$ time we can
-  build a data structure of size $\O(n\log n)$ with which we can test if an
-  arbitrary degree-2 query curve segment $\gamma$ with five degrees of freedom
-  intersects $P_E$ in $\O(n^{\frac{4}{5}}\log n)$ time.
-    % We can preprocess a simple polygon $P_E$ in $\mathcal{O}(n \log n)$ space $\mathcal{O}(n \log n)$ preprocessing time, such that for any degree-2 curve segment $\gamma$ we can find if there is an intersection between $\gamma$ and at least one edge in $E$ in $\mathcal{O}( n^{\frac{4}{5}} \log n)$ time. 
-\end{theorem}
-\frank{Generalize the statement to $k$ degrees of freedom}
-
-
-\subsection{Simple Polygon}
-\label{subsec:label}
-
-
-
-% \frank{integrate this here somewhere}
-% \subparagraph{Shortest path queries.}
-% Given a simple polygon with $n$ vertices, Guibas and Hershberger \cite{guibas1989optimal} create a $\Theta(n)$ size data structure, in $\Theta(n)$ time, that for any two points $q$ and $r$ can return shortest-path queries in $P$ in $\Theta(\log n + l)$ time where $l$ is the length of the path. They build a balanced hierarchical subdivision~\cite{FRANK} of $P$ using its diagonals, where the leaves in the subdivision form a triangulation of $P$.
-% Let $e$ and $e'$ be two edges in $P$, the \emph{hourglass} $H(e, e')$ is the union of all shortest paths from points on $e$ to points on $e'$. $H(e, e')$ is a polygon in $P$ which is bound by $e, e'$ and the shortest paths between the endpoints of $e$ and $e'$. Since an hourglass is bounded by four paths in $P$, the hourglass can be represented as a red-black tree where each node represents an edge on the border of $H(e, e')$, this is called the \emph{implicit representation}. Each node in the hierarchical decomposition stores several implicit hourglasses between diagonals. At query time, Guibas and Hershberger locate the leaf triangles $\Delta_q$ and $\Delta_r$ which contain the query points $q$ and $r$. They identify  $\mathcal{O}(\log n)$ pre-stored hourglasses and concatenate them using at most $\mathcal{O}(\log n)$ \emph{outer tangents} to form the hourglass between $\Delta_q$ and $\Delta_r$. This hourglass can be used to find the shortest path between $q$ and $r$. Refer to Figure~\ref{fig:guibas} for an example. 
-%
-\begin{figure}[tb]
-    \centering
-    \includegraphics[]{../guibas}
-    \caption{A triangulated polygon $P$ where the diagonals are labelled from $d_1$ to $d_{14}$. (left) a balanced hierarchical subdivision on the diagonals. (right) There are $13$ diagonals between $\Delta_q$ and $\Delta_r$. However, we have pre-stored hourglasses $H(d_1,d_3)$, $H(d_3, d_7)$, $H(d_7, d_{11})$ and $H(d_{11}, d_{13})$. Thus during query time, we only have to concatenate $\mathcal{O}(\log n)$ hourglasses to get $H(d_1, d_{13})$. }
-    \label{fig:guibas}
-\end{figure}
-
-% \subparagraph{The entities are contained in a simple polygon.}
-
-\begin{figure}[tb]
-    \centering
-    \includegraphics[]{../visibilityglass}
-    \caption{(left) $H(q,r)$ in orange with the shortest paths between endpoints in dotted blue. The bitangents are underlined in grey. (middle) We obtain each dotted path as a collection of binary search trees, where only the bitangent starts in clockwise and ends in counterclockwise rotation. (right) Using the bitangents, we identify the endpoints of $q'$ and $r'$ and obtain $L(q,r)$ in grey. }
-    \label{fig:visibilityglass}
-\end{figure}
-
-Using this information we can obtain the visibility glass $L(q,r)$ using the data structure $\mathcal{D}$ from \cite{guibas1989optimal} (refer to Figure~\ref{fig:visibilityglass}). Given $q$ and $r$, we can obtain the border of $H(q,r)$ as a set of $\mathcal{O}(\log n)$ concatenated persistent red-black trees. We can binary search these trees to detect if $H(q,r)$ is a funnel. If $H(q,r)$ is not a funnel, we can find the two bitangents of $H(q,r)$ as follows: we query $\mathcal{D}$ for the path $\pi$ from the upper point of $q$ to the lower point of $r$ and obtain this path as a set of $\mathcal{O}(\log n)$ red-black trees. We perform a binary search on these trees to locate the bitangent segment that starts with a clockwise and ends with a counter-clockwise rotation. We perform a symmetrical procedure to identify the second bitangent.
-These two bitangents bound the segments $q'$ an $r'$. We query $\mathcal{D}$ one more time with these two segments to obtain $H(q', r') = L(q,r)$ in its implicit representation. Each query in $\mathcal{D}$ takes $\mathcal{O}(\log n)$ time and so does our binary search thus we conclude:
-
-\begin{lemma}
-\label{lemma:visibilityquery}
-  The Guibas and Hershberger data structure can for any segment $q,r$ contained in $P$ obtain the implicit representation of $L(q,r)$ in $\mathcal{O}(\log n)$ time.
-\end{lemma}
-
  
-
-
-We detect such a point using Lemma~\ref{lemma:hyperbola}. 
-At this point we have transformed the visibility query in the primal to an intersection query between a convex polygon and a degree-2 curve segment \patrick{must come after lemma 9} in the dual and we employ our data structure from Section~\ref{sec:intersectionsearch}. In its general form, this data structure transforms an intersection query between an arbitrary degree-2 curve segment into a halfspace emptyness query in $\mathbb{R}^5$. Our query segment has one fewer degree of freedom than a general degree-2 curve which immediately makes it a halfspace emptyness query in $\mathbb{R}^4$ instead (refer to Equation~\ref{eq:hyperbola}).
-
-
-
-\begin{figure}[tb]
-    \centering
-    \includegraphics[]{../panel}
-    \caption{(1) The base level of our data structure is a hierarchical triangulation. (2) Given $q$ and $r$, we compute $\Lambda(q,r)$ and the degree-2 query curve $\gamma$. (3) We store the parameters of each edge of $\Lambda(q,r)$ (4) Each parameter vector gets mapped to a point in $\mathbb{R}^4$ and the query curve segment gets mapped to a 4-dimensional halfspace which is empty only if $\gamma$ intersects no edge from $\Lambda(q,r)$.}
-    \label{fig:panel}
-\end{figure}
-
-
-Our final data structure (Figure~\ref{fig:panel}) is a two-level data structure with some interesting technicalities. The base level is the hierarchical decomposition $\mathcal{D}$ of $P$. The leaves of this tree represent a triangle in a triangulation of $P$ and every node in the tree stores the dual of constantly many hourglasses (which may be an unbounded region), represented as a red-black tree on its edges. Every vertex of $P$ in the primal, is contained in at most $\mathcal{O}(\log n)$ of these pre-stored hourglasses \cite{FRANK} so our naive implementation of this data structure takes $\mathcal{O}(n \log n)$ space. \footnote{something about not using persistence}
-Every pre-stored hourglass represents a collection of line segments and each line segment has a unique representative point in $\mathbb{R}^4$. In the second level of our data structure we store the representative points in the two-level data structure from Section~\ref{sec:intersectionsearch}. This (4-dimensional) data structure can store $m$ points in $S(4) \log n$ space. Thus, the final data structure uses $\mathcal{O}(S(4) \log^2 n)$ space.
-
-\subparagraph{Querying.}
-When we get $r$ and $q$ we have to decide if there exists
-a time $t^*$ at which $r$ and $q$ are mutually visible. We can compute the query segment $\gamma$ in constant time. Using Lemma~\ref{lemma:visibilityquery} we obtain the implicit representation of $\Lambda(q,r)$ (the dual of the visibility glass) in $\mathcal{O}(\log n)$ time. Recall that $L(q,r)$ is the concatenation of $\mathcal{O}(\log n)$ hourglasses: that is $L(q,r)$ is a collection of $\mathcal{O}(\log n)$ inward-convex chains $C_0 \ldots C_m$ (which are stored in a subtree of a red-black tree), each joined by an outer tangent $\tau_1 \ldots \tau_{m}$. Refer to Figure~\ref{fig:chain} for an example. The dual of $L(q,r)$ is a concatenation of the dual of each inward-convex chain $C_0 \ldots C_m$ where each two chains $C_{i-1}, C_{i}$ are joined by a vertex which is the dual of $\tau_i$. 
-
-Given the implicit representation of $\Lambda(q,r)$, we would like to immediately search for an intersection and the query curve $\gamma$ however a slight technicality appears: Consider the dualization of an inward-convex chain $C_i$ with respect to the polygon $\Lambda(q,r)$: $\Lambda(q,r)$ contains a subset of this chain, which is cut off by two outer-tangents which were not known before query time. These cut-off points were constructed during the query from $\cite{guibas1989optimal}$. During that query we can remember a pointer to each of the $\mathcal{O}(\log n)$ cut-off points induced by the outer-tangents. The result is, that the border of $\Lambda(q,r)$ is represented by at most $\mathcal{O}(\log n)$ red-black trees, which are bound by $\mathcal{O}(\log n)$ nodes induced by the outer tangents. The leaves of these trees are fixed vertices in $P$ (and therefore fixed edges in $\Lambda(q,r)$) and in the dual these fixed edges are joined by at most $\mathcal{O}(\log n)$ edges which we discover at query time.
-%
-\begin{figure}[tb]
-    \centering
-    \includegraphics[]{../chain}
-    \caption{(left) An hourglass between $q$ and $r$ in orange. The lower chain consists of five chains which coincide $P$ that are joined by outer tangents in dotted lines labelled $\tau_1 \ldots \tau_5$. (middle) An example of an area bound by the dualized chain $C_4$. (right) A simplified version of $\Lambda(q,r)$. Note that outer tangents could become vertices of $\Lambda(q,r)$.}
-    \label{fig:chain}
-\end{figure}
-%
-Being aware of this technicality we proceed as follows: we manually check if any of the $\mathcal{O}(\log n)$ uncertain edges intersect our query curve segment. If not, we have $\log n$ pre-stored trees where each tree represents a chain bordering $\Lambda(q,r)$. Recall that in Section~\ref{sec:intersectionsearch} we observed that a degree-2 curve segment can intersect a polygon in 3 cases labelled (a), (b) and (c). The argument for cases (b) and (c) still holds, but any subtree tree $T$ found by the base level of our data structure bounds a convex area which is larger than its portion on $\Lambda(q,r)$. However, observe the following: suppose an endpoint of the query segment lies within $\Lambda(q,r)$, in our application this means that either the two start points of $q$ and $r$, or the two end points of $q$ and $r$ are mutually visible. Checking if these two points are visible in the primal, can easily be done in logarithmic time. It follows that we can test for an intersection between our query curve segment and $\Lambda(q,r)$ in $Q(4) \log n$ time.
-
-\begin{theorem}
-    We can preprocess a simple polygon $P$ in $\mathcal{O}(S(4)\log^2 n)$ space and $C(4) \log^3 n)$ time. Such that for two query segment trajectories $q$ and $r$ contained in $P$, we can determine if there is a time $t$ where $q$ and $r$ are mutually visible in $\mathcal{O}(Q(4) \log n)$ time.
-\end{theorem}
-
-\subsection{Polygonal Domain}
-\label{sub:Polygonal_Domain}
-
-We investigate the two cases where (1) the entities can walk through
-edges of $P$ and (2) $P$ is a polygonal domain simultaneously. Let $k$
-be an unspecified constant. We prove that it is possible to preprocess
-a polygonal domain $P$ with $n$ vertices in $\mathcal{O}(n^k)$
-time,\frank{Your description seems to suggest that $O(n^3\log n)$ time
-is sufficient no?}
-such that for any two entities $q$ and $r$ that each traverse a line
-segment possibly through edges of $P$, we can determine if there is a
-moment when $q$ and $r$ are mutually visible in sub-linear time. Our
-approach almost certainly does not generate an optimal solution with
-respect to its space requirement and query time. \frank{rephrase prev sentence} However, it is a
-non-trivial proof that sub-linear query times are achievable. We
-obtain these results, by transforming the visibility query in the
-plane into an intersection query in $\mathbb{R}^4$ and then
-immediately applying semi-algebraic range searching.
-
-Given a polygonal domain $P$ with $n$ vertices, we construct two near-identical data structures. One data structure tests if any two segment trajectories in $P$ realise a line-of-sight with positive slope and the other checks if they realise a line-of-sight with negative slope. Let $t^*$ be a time where $q$ and $r$ are mutually visible and the line through them has positive slope. The segment between $q$ and $r$ must be contained in a visibility glass $L(e_1, e_2)$ for two edges $e_1, e_2 \in P$. Consider the two points of intersection $p_1, p_2$ between the line through $q$ and $r$ and $e_1$ and $e_2$  and assume that $y_{p_1} \le y_{p_2}$ and $y_q \le y_r$. Because the line through $q$ and $r$ has a positive slope, we must have that $x_{p_1} \le x_{q} \le x_{r} \le x_{p_2}$.
-This allows to detect if there is ever a moment of visibility with the
-following approach: for each pair of edges $e_1, e_2$ we consider a
-triangulation of their dualized visibility glass $\Lambda(e_1,
-e_2)$. We lift each of the $\mathcal{O}(n^3)$ resulting triangles to a
-two-dimensional surface in $\mathbb{R}^4$ with a map of constant
-description size \frank{what do the dimensions represent?}. Similarly,
-we map the segment $\gamma$ realised by $q$ and $r$ to a curve segment
-in $\mathbb{R}^4$. Using the previous observation we show that there
-is a time $t^*$ where $q$ and $r$ are mutually visible if and only if
-the curve segment intersects a volume bound by one of the
-$\mathcal{O}(n^3)$ surfaces. Since all objects have constant
-description size, it is possible to detect if there is an intersection
-with a halfspace emptyness query in a constant dimension which
-concludes the proof\frank{not sure if I would call this a proof yet.}. For more details we refer to Appendix~\ref{app:Two_moving_entities_in_a_polygonal_domain}.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
 
 % \section {Conclusions}
 % \label {sec:conclusions}
@@ -848,17 +756,105 @@ concludes the proof\frank{not sure if I would call this a proof yet.}. For more 
 
 \newpage
 \bibliographystyle{abbrv}
-\bibliography{bib,../bib}
+\bibliography{bib}
 
 \newpage
 \appendix
 
+\section{Transforming two entites into an algebraic curve.}
+\label{app:hyperbola}
+
+
+Throughout this paper, we study the line-of-sight between two entities that each move along a linear trajectory (possibly at different but constant speeds) during the time $t \in [0,1]$. Consider the line $g(t)$ through the two entities at time $t$. We can dualize $g(t)$ to a point using classical point-line dualization. In Section~\ref{sec:prelims} we claim that the continuous dualization of the line through the two entities traces a degree-2 curve segment denoted by $\gamma$ in the dual. Here we show why this is the case:
+
+\begin{repeatlemma}{lemma:hyperbola}
+  The segment $\gamma$ is a segment of a hyperbolic curve with $5$ degrees of freedom.
+\end{repeatlemma}
+
+\begin{proof}%[Proof of Lemma~\ref{lemma:hyperbola}]
+For algebraic convenience we say that entity $q$ walks from $(a_1, a_2)$ to $(a_1 + a_3, a_2 + a_4)$ and that entity $r$ walks from $(a_5, a_6)$ to $(a_5 + a_7, a_6 + a_8)$. Note that the speed of entity $q$ is $\lVert (a_3, a_4) \rVert$ and that the speed of entity $r$ is $\lVert (a_7, a_8) \rVert$. We can parametrize the position of entity $q$ and $r$ on the time $t \in [0,1]$ as follows:
+
+\begin{equation}
+    \label{eq:line}
+     q(t) = \left( \begin{array}{c}
+         x_{q(t)}  \\
+         y_{q(t)} 
+    \end{array}  \right) = 
+    \left( \begin{array}{c}
+         a_1 + a_3 t \\
+         a_2 + a_4 t
+    \end{array}  \right)  \quad
+      r(t) = \left( \begin{array}{c}
+         x_{r(t)}  \\
+         y_{r(t)} 
+    \end{array}  \right) = 
+    \left( \begin{array}{c}
+         a_5 + a_7 t \\
+         a_6 + a_8 t
+    \end{array}  \right) 
+\end{equation}
+
+
+At all times, the line $g(t)$ is the line through the points $q(t)$ and $r(t)$. We say that at all times, $g(t)$ has slope and offset $(\alpha(t), \beta(t))$. The parametrisation of $g(t)$ then becomes:
+
+\begin{equation}
+\label{eq:curve}
+   g(t) = \left( \begin{array}{c}
+         \alpha(t)  \\
+         \beta(t) 
+    \end{array}  \right) = 
+    \left( \begin{array}{c}
+         \frac{y_{r(t)} - y_{q(t)}}{x_{r(t)} - x_{q(t)}}  \\
+         \alpha(t)\cdot x_{q(t)} - y_{q(t)}
+    \end{array}  \right) =
+    \left( \begin{array}{c}
+         \frac{ a_6 - a_2 + (a_8 - a_4) t}
+      { a_5 - a_1  + (a_7 - a_3) t }  \\
+         \alpha(t) (a_1 - a_3 t) - a_2 - a_4 t 
+    \end{array}  \right)
+  \end{equation}
+  
+  If the time $t$ lies between $0$ and $1$, this parametric equation traces our curve segment $\gamma$ and if we take $t$ over all of $\mathbb{R}$, the parametric equation traces a full curve which we denote by $\Gamma$. To show the degree of the curve $\Gamma$ we rewrite the parametrized curve to a canonical form that drops the dependence on $t$. First we take the formula for the $\beta$-coordinate and isolate $t$:
+  
+  \[
+     t = \frac{\alpha(t) a_1 - a_2  - \beta(t)}{\alpha(t) a_3 + a_4}
+  \]
+We then take the formula for the $\alpha$-coordinate and remove the fraction by multiplying both sides with $ ((a_5 - a_1)  + (a_7 - a_3) t)$:
+
+\[ 
+\alpha(t)(a_5 - a_1)  + \alpha(t)(a_7 - a_3) t = (a_6 - a_2) + (a_8 - a_4) t
+\]
+
+We substitute the value for $t$ into this equation, and remove the fraction by multiplying both sides with $(\alpha(t) a_3 + a_4)$:
+
+\begin{align*}
+\alpha(t)(\alpha(t) a_3 + a_4)(a_5 - a_1)  + \alpha(t)(a_7 - a_3) (\alpha(t) a_1 - a_2  - \beta(t)) = \\
+(a_6 - a_2)(\alpha(t) a_3 + a_4) + (a_8 - a_4) (\alpha(t) a_1 - a_2  - \beta(t)) \Rightarrow \\
+\alpha(t)^2a_3(a_5 - a_1) + \alpha(t)a_4(a_5 - a_1)  + \alpha(t)^2a_1(a_7 - a_3)
+- \alpha(t)a_2(a_7 - a_3)  - \alpha(t)\beta(t)(a_7 - a_3) = \\
+\alpha(t) a_3(a_6 - a_2) + a_4(a_6 - a_2) + \alpha(t)a_1(a_8 - a_4) - a_2 (a_8 - a_4) - \beta(t)(a_8 - a_4) 
+\end{align*}
+
+Lastly we linearize this equation by separating polynomials based on $\alpha(t)$ and $\beta(t)$ from polynomials based on $a_1 \ldots a_8$.
+
+\begin{align}
+\label{eq:hyperbola}
+    0= [\alpha(t)^2](a_5 a_3 -2 a_1 a_3 + a_1 a_7)+ \\
+    [\alpha(t)](a_4 a_5 - a_3 a_6 + a_2 (2 a_3 - a_7) - a_1 a_8) + \\
+    [\alpha(t)\beta(t)](-(a_7 - a_3)) + [\beta(t)](-(a_8 - a_4)) + [1](a_4(a_6 - a_2)- a_2 (a_8 - a_4))
+\end{align}
+\end{proof}
+
+
 \section{Semi-algebraic range searching}
 \label{appx:rangesearch}
 
-Throughout this paper we make use of the semi-algebraic (or linearization) techniques from Agarwal \etal \cite{agarwal2013range}. This appendix section contains an extended introduction to these techniques.
-\frank{Have this sentence in
-  the intro of the preliminaries section somewhere as well.}
+%\subsection{An introduction to semi-algebraic range searching and some examples.}
+\label{appx:introduction}
+
+Throughout this paper we make extensive use of the semi-algebraic (or linearization) techniques from Agarwal \etal \cite{agarwal2013range}. 
+%This appendix section contains an extended introduction to these techniques.
+We describe the technique in detail for completeness.
 
 Let $X$ be a set of $n$ geometric objects in $\mathbb{R}^d$, where each object is parametrized by a vector $\vec{x}$. If $X$ is a set of points, then the most natural parametrization is a vector of its coordinates. But $X$ could be a more complicated algebraic object such as a line, in that case the most natural parametrization is a two-dimensional vector containing its slope and offset.
 
@@ -879,8 +875,7 @@ Consider our example. The map $f$ that we found, is the well-known parabeloid pr
     \label{fig:algebraic}
 \end{figure}
 
-\subsection{An example: intersecting line segments with a quadratic
-  curve segment}
+\subsection{Intersecting line segments with a quadratic curve segment}
 \label{sub:intersecting_line_segments_with_a_quadratic__curve_segment}
 
 Let $E$ be a set of $n$ line segments. We describe how to preprocess
@@ -901,15 +896,13 @@ specifically, we establish the following result:
   % segment $\gamma$ and an edge in $E$ can be found in
   % $\mathcal{O}(n^{1-\frac{1}{15000}})$ time.
 \end{lemma}
-\frank{In light of the $k/2$ for just emptyness I think this should
-  become $O(n^{1-1/7500})$ no?}
 
 
 % prove that we can preprocess \emph{any} set of edges $E$, such that we can test for an intersection between an arbitrary degree-2 curve segment $\gamma$ and an edge in $E$ in sub-linear time.  This means that the set of edges $E$ does not have to be connected, convex or even non-intersecting. We first provide a proof outline and then the formal proof.
 
 % In Section~\ref{sec:intersectionsearch} we describe how to preproces a convex simple polygon $P_E$ formed by a set of edges $E$ such that for any segment $\gamma$ of an arbitrary degree-2 curve $\Gamma$, we can test if $P_E$ is intersected by $\gamma$ in sub-linear time. In the section we explain that we first make many geometric observations about $P_E$ and that we only implore semi-algebraic range searching in the last step. We note that it is possible to immediately implore semi-algebraic range searching but that this leads to a less efficient solution. Although this solution brings worse bounds, the solution is more general: We specifically prove that we can preprocess \emph{any} set of edges $E$, such that we can test for an intersection between an arbitrary degree-2 curve segment $\gamma$ and an edge in $E$ in sub-linear time.  This means that the set of edges $E$ does not have to be connected, convex or even non-intersecting. We first provide a proof outline and then the formal proof.
 
-\subparagraph*{Proof outline}
+\subparagraph*{Proof outline.}
 As an object set we are given a set $E$ of arbitrary edges with no restrictions. We say that an edge $e \in E$ goes from the point $(x_1, x_2)$ to the point $(x_1 + x_3, x_2 + x_4)$ and thus parametrize each edge as a vector $\vec{x} = (x_1, x_2, x_3, x_4)$. As a query family, we are given the family $\Gamma$ of degree-2 curve segments which are parametrized according to equation~\ref{eq:hyperbola} with a parametrization vector $\vec{a} = (a_1 \ldots a_8)$. The goal is to design a predicate function $F(\vec{x}, \vec{a})$ that takes any pair of edge and query curve and that outputs a number. The query curve should intersect the edge if and only if the output number is less than zero. Specifically, we design \emph{four} predicate functions $F_1, F_2, F_3, F_4$ and the query curve intersects the edge if and only if all four predicates output a number less than zero. This can be checked by using four consecutive halfspace-range queries.
 
 We detect for an intersection between an arbitrary $\gamma$ in three steps:
@@ -928,7 +921,7 @@ At step 2, we compute the time $t$ for which the first coordinate of the degree-
 \paragraph*{A proof of a more restricted case that linearizes to $\mathbb{R}^3$.}
 We first want to show that the approach that we suggested above can be an efficient way to compute the intersection between algebraic objects. % If you are only interested in the formal proof of Lemma~\ref{lemma:15000}, please skip ahead to the next subsection.
 
-Consider the set $E$ of arbitrary line segments, and the family of regions $\Gamma'$ where each range $G \in \Gamma'$ is a \emph{line segment} (hence, a more restricted degree-2 curve). Agarwal notes \cite{agarwal1996range} that the intersection between an edge $e \in E$ and segment $G \in \Gamma$ can be written as a predicate with three linear terms. Most likely, Agarwal uses the cross product between the segments for this linearization and this approach does not generalize to curves. We show that with our approach, you also get a linearization of three terms. 
+Consider the set $E$ of arbitrary line segments, and the family of regions $\Gamma'$ where each range $G \in \Gamma'$ is a \emph{line segment} (hence, a more restricted degree-2 curve). Agarwal notes \cite{agarwal2004range} that the intersection between an edge $e \in E$ and segment $G \in \Gamma$ can be written as a predicate with three linear terms. Most likely, Agarwal uses the cross product between the segments for this linearization and this approach does not generalize to curves. We show that with our approach, you also get a linearization of three terms. 
 
 We assume that each edge $e$ in $E$ is from the point $(x_1, x_2)$ to $(x_1 + x_3, x_2 + x_4)$ and that each query $G$ in $\Gamma'$ is a segment from the point $(a_1, a_2)$ to $(a_1 + a_3, a_2 + a_4)$. The first step is to translate and shear the plane.
 First we translate the plane with the vector $-(x_1, x_2)$ such that $e$ starts at the origin. Then we shear the plane with the following map: $(x,y) \rightarrow (x - \frac{x_3}{x_4}y, y)$ such that $e$ points upwards. 
@@ -1011,9 +1004,9 @@ We multiply both sides by $- a_3 + \frac{x_3}{x_4}a_4$ and obtain:
 
 The predicate $F_4$ checks if the $y$-value is above $0$. It is the same predicate as $F_3$ with the terms dependent on $\sqrt{x_3^2 + x_4^2}$. It follows that we can verify if a query segment intersects an edge in $E$ using four predicates which each have at most 3 terms. 
 
-\paragraph*{The formal proof of Lemma~\ref{lemma:15000}}
+\paragraph*{Poof of Lemma~\ref{lemma:15000}.}
 
-Lastly, we provide the formal proof for Lemma~\ref{lema:15000}. Denote by $\gamma$ any segment parametrized by a vector $\vec{a}$ according to equation~\ref{eq:hyperbola}. The algebraic formulations will get very long, so for succinctness we denote $A_i = a_i - a_{i-4}$. The formulation for $\gamma$ dependent on $t$ now becomes:
+Lastly, we provide the complete proof for Lemma~\ref{lemma:15000}. Denote by $\gamma$ any segment parametrized by a vector $\vec{a}$ according to equation~\ref{eq:hyperbola}. The algebraic formulations will get very long, so for succinctness we denote $A_i = a_i - a_{i-4}$. The formulation for $\gamma$ dependent on $t$ now becomes:
 
 \begin{equation}
   \gamma(t) = \left( \begin{array}{c}
@@ -1105,7 +1098,7 @@ Now we work out what the terms in this equation actually are:
      [1](- a_2 a_4 A_5 A_7 - a_4 A_6 A_7)
 \end{align*}
 
-\paragraph{Working out the $bc$:}
+\subparagraph{Working out the $bc$.}
 
 \begin{align*}
      bc =
@@ -1151,28 +1144,195 @@ Consider the equation $(b^2 + c^2 - bc + ac)$. At this point, a conservative est
 
 
 
-\section{Omitted Proofs}
-\label{App:Omitted_Proofs}
 
-\subsection{Proving Lemma~\ref{lem:query_static}}
+\section{A data structure for queries with one moving entity}
+\label{app:pointline}
+
+In this section we develop data structures that can efficiently answer
+trajectory visibility queries in case one of the entities $q$ is
+stationary, while $r$ travels along a line segment. Our goal is to
+achieve sub-linear query time. We consider three variants of this
+setting: (i) $P$ is a simple polygon and $r$ is contained in $P$, (ii)
+$P$ is a simple polygon but the trajectory of $r$ may intersect edges
+of $P$, and (iii) $P$ is a polygonal domain and $r$ may intersect edges of $P$.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[]{../funnel}
+    \caption{Three times a query pair $(q,r)$ in a simple polygon. In the middle case, the paths $\pi_1, \pi_2$ share their first line segment but there still is a point on $r$ which is visible from $q$.}
+    \label{fig:funnel}
+\end{figure}
+
+\subparagraph{Entity $r$ is contained in a simple polygon.} Consider
+the shortest paths $\pi_1, \pi_2$ from $q$ to the end points of
+$r$. Observe that if edges of $\pi_1$ and $\pi_2$ coincide, they
+coincide in a connected chain from $q$~\cite{guibas1989optimal}. Moreover
+(Figure~\ref{fig:funnel}) if more than one line segment of $\pi_1$ and
+$\pi_2$ coincide, then any shortest path from $q$ to a point on $r$
+cannot be a single line segment. If no edges of $\pi_1$ and $\pi_2$
+coincide then there is at least one point on $r$, whose shortest path
+to $q$ is a line segment. If exactly one line segment of $\pi_1$
+coincides with a segment of $\pi_2$, then that segment must be
+connected to $q$ and if there is a line-of-sight between $q$ and $r$,
+it has to follow that line segment. This observation allows us to
+answer a visibility query by considering only the first three vertices
+of $\pi_1$ and $\pi_2$. These vertices can be found in $\O(\log n)$
+time using the two-point shortest path data structure of Guibas and
+Hershberger~\cite{guibas1989optimal}. We conclude:
+
+% gives us an
+% algorithm for the visibility query in this scenario: we simply build
+% the shortest path data structure from Guibas and Hershberger which
+% takes $\Theta(n)$ space, has $\Theta{O}(n)$ construction and
+% $\Theta(\log n)$ query time. Given $q$ and $r$, we use this data
+% structure to obtain $\pi_1$ and $\pi_2$ and we check whether the first
+% and second edge coincides. If only the first edge coincides we trace
+% its supporting line and check if we reach $r$ without intersecting
+% $\pi_1$ or $\pi_2$ using their binary tree representation.
+
+\begin{repeattheorem}{thm:one_dead_one_alive}
+  Let $P$ be a simple polygon with $n$ vertices. In $\O(n)$ time we
+  can build a data structure of size $\O(n)$ with which we can test if
+  there is a time at which a stationary entity can see a linearly
+  moving entity in $\O(\log n)$ time.
+  % We can preprocess a simple polygon $P$ in $\Theta(n)$ space and
+  % $\Theta(n)$ time. Such that for any query point $q$ and segment
+  % trajectory $r$ which is contained in $P$, we can determine if there
+  % is a point on $r$ that is visible from $q$ in $\Theta(\log n)$ time.
+\end{repeattheorem}
 
 
+% \frank{integrate the thing below:}
+% \subparagraph{Visibility polygon retrieval.}
+% For any point $q$ in a polygonal domain $P$, its \emph{visibility
+%   polygon} $V_q$ is the union of all points visible from $q$. 
 
 
+% A fixed edge coincides with an edge of $P$. An variate edge of $V_q$ is stored as a tuple $(e, v_e)$ where $e$ is an edge and $v_e$ is a vertex of $P$. One endpoint of $e$ is the intersection between the line $qv_e$ and $e$. For all $q \in P$, the \emph{implicit} visibility polygon is a clockwise order of the fixed and variate edges of $V_q$, stored in a red-black tree. Aronov \etal \cite{aronov2002visibility} show how to partition a simple polygon $P$ into $\mathcal{O}(n^2)$ cells such that for each cell, all points in that cell have the same implicit visibility polygon. This allows them to prepreprocess $P$ in $\mathcal{O}(n^2\log n)$ time using $\mathcal{O}(n^2)$ space, such that for any query point $q$, we can get a pointer to the implicit $V_q$ in $\mathcal{O}(\log n)$ time. 
+%
 
+\subparagraph{Entity $r$ can cross a simple polygon.}
+If $r$ is able to move through edges of $P$ then its trajectory may
+intersect the boundary of $P$ linearly often. Inspecting each of the
+resulting subsegments explicitly would thus require at least
+$\Omega(n)$ time. Hence, we use a different approach.
+Let $V_q$ denote the \emph{visibility polygon} of point $q$: the set
+of all points visible from $q$. There is a time at which $q$ can see
+$r$ if and only if the trajectory of $r$ intersects (the boundary of)
+$V_q$. We build a data structure to find such a point (if one
+exists).
 
-% In Section~\ref{sec:pointline} we describe a data structure solution for the visibility query between an entity $r$ that can move through edges of a simple polygon $P$ and a stationary entity $q$. Using ray shooting, we identify a polyline which consist of at most $n$ uncertain edges, where each uncertain edge has a corresponding reflex vertex. 
-% We are interested in computing if there is an uncertain edge $e$ together with a reflex vertex $v$, such that the line-of-sight of from $q$ through $v$, intersects the trajectory $r$ and we do this using semi-algebraic range searching. This proof is illustrated by Figure~\ref{fig:pointline}. In semi-algebraic range searching the object pair $(e,v)$ must be represented as a parameter vector $\vec{x}$. The most natural parameter vector would be a six-dimensional vector that specifies the start and end point of $e$, and the location of $v$. The trajectory of $r$ together with $q$ can be represented by a six-dimensional vector in the same way. However, earlier in this appendix we mentioned that a more efficient parametrization leads to a more efficient linearization. We use geometric observations that allow us to represent the edge $e$ and the trajectory $r$ by their full lines, thus reducing the number of variables needed.
+Aronov~\etal~\cite{aronov2002visibility} actually developed an $\O(n^2)$ size
+data structure that can be built in $\O(n^2\log n)$ time and can report the
+visibility polygon of an arbitrary query point $q \in P$ in $\O(\log^2 n)$
+time. The visibility polygon $V_q$ is returned in its combinatorial
+representation, that is, as a (pointer to a) balanced binary search tree,
+storing the vertices of $V_q$ in order along the boundary. It is important to
+note that this combinatorial representation does not explicitly store the
+locations of all vertices of $V_q$. Instead, a vertex $v$ of $V_q$ may be
+represented by a pair $(e,w)$, indicating that $v$ is the intersection point of
+polygon edge $e$ and the line through vertex $w \in P$ and the query point
+$q$. Computing the explicit location of all vertices of $V_q$ thus takes
+$\O(|V_q|)$ time, if so desired, by traversing the tree. We now extend the
+results of Aronov~\etal in such a way that we can efficiently test if a line
+segment intersects $V_q$ \emph{without} spending the $\O(|V_q|)$ time to
+compute the explicit locations.
 
-\begin{repeatlemma}{lem:query_static}
+We briefly review the results of Aronov~\etal first. They build a
+balanced hierarchical decomposition of
+$P$~\cite{Chazelle1989}. Each node $v$ in the balanced
+hierarchical decomposition represents a subpolygon $P_v$ of $P$ (the
+root corresponds to $P$ itself) and a diagonal of $P_v$ that splits
+$P_v$ into two roughly equal size subpolygons $P_\ell$ and $P_r$. For
+subpolygon $P_\ell$ the data structure stores a planar subdivision
+$\S_\ell$ (of the area outside $P_\ell$) such that for all points in a
+cell of $\S_\ell$ the part of the visibility polygon inside $P_\ell$
+has the same combinatorial representation. See Figure~\ref{fig:aronov}
+for an illustration. Moreover, for each cell it stores the
+corresponding combinatorial representation. These representations can
+be stored compactly by traversing $\S_\ell$ while maintaining the
+(representation of the) visibility polygon in $P_\ell$ in a partially
+persistent red black tree~\cite{aronov2002visibility}. The data structure stores an
+analogous subdivision for $P_r$. The complete visibility polygon of
+$q$ can be obtained by concatenating $\O(\log n)$ subchains of these
+pre-stored combinatorial representations (one from every level of the
+hierarchical decomposition).
+
+We use the same approach as Aronov~\etal~\cite{aronov2002visibility},
+but we use a different representation of $V_q$ (refer to Figure~\ref{fig:twolevel}). Our representation
+will be a weight balanced binary search tree
+($BB[\alpha]$-tree~\cite{nievergelt1973bbalphatree}) whose leaves
+store the vertices of $V_q$ in order along the boundary. An internal
+node of this tree corresponds to a subchain of vertices along $V_q$,
+which is stored in an associated data structure. We distinguish two
+types of vertices in such a chain: \emph{fixed vertices}, for which we
+know the exact location, and \emph{variate} vertices, which are
+represented by an polygon-edge, polygon-vertex pair $(e,w)$. We store
+the fixed vertices in a linear size dynamic data structure that
+supports halfspace-emptyness queries, that is, a dynamic convex hull
+data structure~\cite{brodal2002dynamic}. This data structure uses $\O(m)$
+space, and supports $\O(\log m)$ time updates and queries, where $m$
+is the number of stored points. The variate vertices are mapped to a
+point in $\R^8$ using a function $f$ that is independent of $q$. We
+give the precise definition later. We store the resulting points in a
+dynamic data structure that can answer halfspace emptyness
+queries~\cite{agarwal1995dynamichalfspace}. This data structure uses
+$\O(m\log m)$ space, answers queries in $\O(m^{\frac{3}{4}+\eps})$ time and
+supports updates in $\O(\log^2 m)$ time, where $m$ is the number of
+points stored. It follows that our representation of $V_q$ uses
+$\O(n\log^2 n)$ space, and supports updates in amortized
+$\O(\log^3 n)$ time.
+
+% Since (re)building an associated data
+% structure of size $m$ takes $O(m\log^2 m)$ time, the total cost for
+% rebuilding the associated data structures during rotations in the
+% primary tree is $O(n\log^3 n)$~\cite{mehlhorn1984data}.
+Since all nodes in the data structure have constant in-degree we can
+make it partially persistent at the cost of $\O(\log^3 n)$ space per
+update~\cite{driscoll1989persistent}. It follows we can represent the
+visibility polygons for all cells in $\S_\ell$ in $O(n^2\log^3 n)$
+space.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[]{../twolevel}
+    \caption{ (left) A simple polygon split in $\mathcal{O}(n^2)$
+      cells. For each cell, there exists a red-black tree that
+      represents a visibility polygon. (middle) Given $V_q$ and $r$,
+      $r$ could intersect the explicit $V_q$ depending on the location
+      of $q$. We shoot two rays from $q$ to $r$ and find their
+      intersection with $V_q$ in the red-black tree. That gives us
+      three leaves highlighted in orange. (right top) All the fixed
+      edges in this node are stored in a ray-shooting data structure,
+      (right bottom) all the variate edges have 8-dimensional points
+      that are stored in an $8$-dimensional partition
+      tree.}
+    \label{fig:twolevel}
+\end{figure}
+
+\subparagraph{Querying.} Given a query $q,r$ we test if the segment $r$
+intersects $V_q$. The main idea is to query our data structure for the part of
+$V_q$ in the wedge defined by $q$ and $r$. We then extend $r$ into a line $\rho$, and
+test if this line separates a vertex of $V_q$ in this wedge from $q$. The
+segment $r$ intersects $V_q$, and thus there is a time at which $r$ is visible
+from $q$, if and only if this is the case.
+
+We can obtain the part of $V_q$ that lies in the wedge defined by $q$ and $r$,
+represented by $O(\log^2 n)$ $BB[\alpha]$-tree nodes. For each of these nodes
+we query the associated data structures to test if the halfspace $\rho^{\neg q}$ not
+containing $q$ is empty. We can directly query the data structure storing the
+fixed vertices with $\rho^{\neg q}$. To test if there is a variate vertex that lies in
+$\rho^{\neg q}$ we map it to a halfspace in $\R^8$ using a function $g$.
+
+\begin{lemma}
+  \label{lem:query_static}
   There are functions $f$ and $g$ such that $f$ maps each variate vertex
   $(e,w)$ to a point $f(e,w) \in \R^8$ and $g$ maps each $\rho^{\neg q}$ to a
   halfspace $g(\rho^{\neg q})$ in $\R^8$ such that $f(e,w) \in g(\rho^{\neg q})$ if and only
   if the location of the variate vertex $(e,w)$ in $V_q$ lies in $\rho^{\neg q}$.
-\end{repeatlemma}
+\end{lemma}
 
-
-\begin{figure}[tb]
+  \begin{figure}[h]
     \centering
     \includegraphics[]{../pointline}
     \caption{ (left) Two points in orange and blue, which have the same implicit visibility polygon, however there could be several placement of $r$ such that $r$ only intersects one of the two explicit visibility polygons. (middle) Entity $r$ in green, $q$ in orange and the chain of uncertain edges. (right) An illustration of the geometric argument. We compute the intersection between $\ell_e$ and $qv$ and check if that point lies below or above $\rho$.}
@@ -1184,9 +1344,8 @@ Consider the equation $(b^2 + c^2 - bc + ac)$. At this point, a conservative est
   the supporting line of the trajectory of $r$. We describe the construction
   for the case that $q$ lies below $\rho$ and $\rho$ is non-vertical. The other
   cases can be handled analogously.
-
-  For each variate vertex $(e,w)$ in a chain we know that the line $qw$
-  intersects the line $\ell_e$ supporting $e$ on the domain of $e$ (this
+  
+    Refer to Figure~\ref{fig:pointline} (right) for an illustration of the proof.   For each variate vertex $(e,w)$ in a chain we know that the line $qw$  intersects the line $\ell_e$ supporting $e$ on the domain of $e$ (this
   property is guaranteed since $(e,w)$ is a vertex of $V_q$). Moreover, it is
   guaranteed that the intersection point between $qv$ and $\rho$ lies on the
   trajectory of $r$. It follows that $q$ can see $r$ if and only if, the
@@ -1242,86 +1401,39 @@ this halfspace.
 \end{proof}
 
 
-\subsection{The proof of Lemma~\ref{lemma:hyperbola} }
+This theorem now immediately follows:
 
-In Section~\ref{sec:lineline} we study the line-of-sight between two entities that each move along a linear trajectory (possibly at different but constant speeds) during the time $t \in [0,1]$. Consider at all times $t \in [0,1]$ the line through the two entities, we can dualize this line to a point using classical point-line dualization. In Section~\ref{sec:lineline} we claim that the continuous dualization of the line through the two entities traces a degree-2 curve segment in the dual. Here we show why this is the case:
-
-\begin{proof}[Proof of Lemma~\ref{lemma:hyperbola}]
-Recall that we required that entity $q$ walks from $(a_1, a_2)$ to $(a_1 + a_3, a_2 + a_4)$ and that entity $r$ walks from $(a_5, a_6)$ to $(a_5 + a_7, a_6 + a_8)$. We can parametrize the position of entity $q$ and $r$ on the time $t$ as follows:
-
-\begin{equation}
-    \label{eq:line}
-     q(t) = \left( \begin{array}{c}
-         x_{q(t)}  \\
-         y_{q(t)} 
-    \end{array}  \right) = 
-    \left( \begin{array}{c}
-         a_1 + a_3 t \\
-         a_2 + a_4 t
-    \end{array}  \right)  \quad
-      r(t) = \left( \begin{array}{c}
-         x_{r(t)}  \\
-         y_{r(t)} 
-    \end{array}  \right) = 
-    \left( \begin{array}{c}
-         a_5 + a_7 t \\
-         a_6 + a_8 t
-    \end{array}  \right) 
-\end{equation}
+\begin{repeattheorem}{thm:one_dead_one_ghost}
+  Let $P$ be a simple polygon with $n$ vertices. In $O(n^2\log^3 n)$ time We
+  can build a data structure of size $O(n^2\log^3 n)$ that can answer
+  trajectory visibility queries between a static entity $q$ and a linearly
+  moving entity $r$ that may cross $P$ in $O(n^{\frac{3}{4}+\eps})$ time.
+\end{repeattheorem}
 
 
-At all times, the line $\Gamma(t)$ represents the line through $q(t)$ and $r(t)$. We say that at all times, $\Gamma(t)$ has slope and offset $(\alpha(t), \beta(t))$. The parametrisation of $\Gamma(t)$ then becomes:
-
-\begin{equation}
-\label{eq:curve}
-   \Gamma(t) = \left( \begin{array}{c}
-         \alpha(t)  \\
-         \beta(t) 
-    \end{array}  \right) = 
-    \left( \begin{array}{c}
-         \frac{y_{r(t)} - y_{q(t)}}{x_{r(t)} - x_{q(t)}}  \\
-         \alpha(t)\cdot x_{q(t)} - y_{q(t)}
-    \end{array}  \right) =
-    \left( \begin{array}{c}
-         \frac{ a_6 - a_2 + (a_8 - a_4) t}
-      { a_5 - a_1  + (a_7 - a_3) t }  \\
-         \alpha(t) (a_1 - a_3 t) - a_2 - a_4 t 
-    \end{array}  \right)
-  \end{equation}
-  
-  If the time $t$ lies between $0$ and $1$, this parametric equation traces our curve segment $\gamma$ and if we take $t$ over all of $\mathbb{R}$, the parametric equation traces a full curve $\Gamma$. To show the degree of the curve $\Gamma$ we rewrite the parametrized curve to a canonical form that drops the dependence on $t$. First we take the formula for the $\beta$-coordinate and isolate $t$:
-  
-  \[
-     t = \frac{\alpha(t) a_1 - a_2  - \beta(t)}{\alpha(t) a_3 + a_4}
-  \]
-We then take the formula for the $\alpha$-coordinate and remove the fraction by multiplying both sides with $ ((a_5 - a_1)  + (a_7 - a_3) t)$:
-
-\[ 
-\alpha(t)(a_5 - a_1)  + \alpha(t)(a_7 - a_3) t = (a_6 - a_2) + (a_8 - a_4) t
-\]
-
-We substitute the value for $t$ into this equation, and remove the fraction by multiplying both sides with $(\alpha(t) a_3 + a_4)$:
-
-\begin{align*}
-\alpha(t)(\alpha(t) a_3 + a_4)(a_5 - a_1)  + \alpha(t)(a_7 - a_3) (\alpha(t) a_1 - a_2  - \beta(t)) = \\
-(a_6 - a_2)(\alpha(t) a_3 + a_4) + (a_8 - a_4) (\alpha(t) a_1 - a_2  - \beta(t)) \Rightarrow \\
-\alpha(t)^2a_3(a_5 - a_1) + \alpha(t)a_4(a_5 - a_1)  + \alpha(t)^2a_1(a_7 - a_3)
-- \alpha(t)a_2(a_7 - a_3)  - \alpha(t)\beta(t)(a_7 - a_3) = \\
-\alpha(t) a_3(a_6 - a_2) + a_4(a_6 - a_2) + \alpha(t)a_1(a_8 - a_4) - a_2 (a_8 - a_4) - \beta(t)(a_8 - a_4) 
-\end{align*}
-
-Lastly we linearize this equation by separating polynomials based on $\alpha(t)$ and $\beta(t)$ from polynomials based on $a_1 \ldots a_8$.
-
-\begin{align}
-\label{eq:hyperbola}
-    0= [\alpha(t)^2](a_5 a_3 -2 a_1 a_3 + a_1 a_7)+ \\
-    [\alpha(t)](a_4 a_5 - a_3 a_6 + a_2 (2 a_3 - a_7) - a_1 a_8) + \\
-    [\alpha(t)\beta(t)](-(a_7 - a_3)) + [\beta(t)](-(a_8 - a_4)) + [1](a_4(a_6 - a_2)- a_2 (a_8 - a_4))
-\end{align}
-\end{proof}
+% \subparagraph{Persistence.}
+% The aforementioned data structures create a hierarchical decomposition of $P$ and store in each node of this tree an implicit representation of a sub-polygon of $P$ (be it an hourglass or a visibility polygon) as a red-black tree. A persistent data structure (introduced by Sarnak and Tarjan \cite{sarnak1986planar}) is a data structure that accepts an arbitrarily long sequence of updates, but is able to remember at any time all its earlier versions. Both data structures make use of persistence to save storage space \cite{hershberger1991new, aronov2002visibility}: instead of storing a unique tree at every node of the decomposition they store one partially persistent red-black tree  which for each adjacent node in the decomposition, remembers an update that transforms the red-black tree into the node for that tree.
+% %
 
 
-\subsection{Two moving entities in a polygonal domain}
+\subsection{Polygonal domains}
+In case $P$ is a polygonal domain we use a
+similar approach; we build a subdivision \S in which all points in a cell have
+a visibility polygon $V_q$ with the same combinatorial structure, and then
+traverse \S while maintaining $V_q$ in a partially persistent data
+structure. To obtain \S we simply we simply take all $O(n^2)$ lines defined by
+pairs of polygon vertices. The subdivision \S is the arrangement of these lines
+and has $O(n^4)$ complexity. We obtain a traversal of \S by computing an Euler
+tour of a spanning tree of the dual of \S. We conclude
+
+\begin{repeattheorem}{thm:full_domain}
+  Let $P$ be a polygonal domain with $n$ vertices. In $O(n^4\log^3 n)$ time We
+  can build a data structure of size $O(n^4\log^3 n)$ that can answer
+  trajectory visibility queries between a static entity $q$ and a linearly
+  moving entity $r$ that may cross $P$ in $O(n^{\frac{3}{4}+\eps})$ time.
+\end{repeattheorem}
+
+\section{Two moving entities in a polygonal domain}
 \label{app:Two_moving_entities_in_a_polygonal_domain}
 
 We investigate the two cases where (1) the entities can walk through edges of $P$ and (2) $P$ is a polygonal domain simultaneously. Let $k$ be an unspecified constant. We prove that it is possible to preprocess a polygonal domain $P$ with $n$ vertices in $\mathcal{O}(n^k)$ time, such that for any two entities $q$ and $r$ that each traverse a line segment possibly through edges of $P$, we can determine if there is a moment when $q$ and $r$ are mutually visible in sub-linear time. Our approach almost certainly does not generate an optimal solution with respect to its space requirement and query time. However, it is a non-trivial proof that sub-linear query times are achievable. We obtain these results, by transforming the visibility query in the plane into an intersection query in $\mathbb{R}^4$ and then immediately applying semi-algebraic range searching. 
@@ -1354,11 +1466,11 @@ If $\gamma'$ intersects $T^*(e_1, e_2)$ then at the time if intersection, the tw
 
 It follows that we can create a data structure that stores $\mathcal{O}(n^3)$ of these volumes (one for each triangle in both the positive and negative visibility glasses), each represented by a point in $\mathbb{R}^k$. Specifically, we build a cutting tree on these $\mathcal{O}(n^3)$ points in $\mathcal{O}(n^{3k})$ time. A query supplied as two segments $q$ and $r$, can be cut into constantly many pairs of segments where for each pair of segments either $q$ is above $r$ or vice versa. For each pair of segments, we derive its corresponding $k$-dimensional halfspace in $\mathcal{O}(k)$ time and we query the cutting tree in $\mathcal{O}(\log^k n)$ time to see if the halfspace if empty. There is no time when the two entities are mutually visible if and only if each of these queries reports an empty halfspace. Thus we conclude:
 
-\begin{theorem}
-    We can preprocess a polygonal domain $P$ using $\mathcal{O}(n^{3k})$  space and preprocessing time. Such that for any two query segment trajectories $q$ and $r$, we can determine if there is a time $t$ where $q$ and $r$ are mutually visible in $\mathcal{O}(\log^k n)$ time.
-\end{theorem}
-
-
+\begin{repeattheorem}{thm:polygonal_moving}
+  Let $P$ be a polygonal domain with $n$ vertices, and let $k$ be some sufficiently large constant. In $O(n^{3k})$ time we
+  can build a data structure of size $O(n^{3k})$ that can answer
+  trajectory visibility queries in $\mathcal{O}(\log^k n)$ time.
+\end{repeattheorem}
 
 
 \end{document}
